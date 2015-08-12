@@ -292,9 +292,10 @@
 
 *** Und in Scheme?
     In Scheme sind die =pair=-, =1st=- und =2nd=-Funktion schon definiert.
-    pair == cons
-    1st == car
-    2nd == cdr
+
+    * pair == cons
+    * 1st == car
+    * 2nd == cdr
 
     Beispiel fuer =car=:
     #+begin_src scheme
