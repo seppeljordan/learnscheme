@@ -1,0 +1,488 @@
+#+title: LISP-Kurs
+#+author: Sebastian Jordan
+#+latex_header: \usepackage[ngerman]{babel}
+
+* Einfuehrung
+** Themen
+   * Rekursion
+   * Concurrency
+   * Streams & Lazy evaluation
+
+** Material
+   * [[https://www.gnu.org/software/mit-scheme/][MIT-Scheme]] :: Downloadlinks und Manual
+   * [[https://www.gnu.org/software/emacs/][Emacs]] :: Programmiereditor mit gutem LISP-Support
+   * [[http://www.vim.org/][Vim]] :: Standard Linuxtexteditor der auf fast allen Systemen
+            installiert ist (Vi)
+   * [[https://mitpress.mit.edu/sicp/][Structure and Interpretation of Computer Programs]] :: Das Buch
+        zum Kurs
+
+* Ein Beispiel: Wurzel nach Newtonverfahren
+  #+begin_src scheme
+    (define (sqrt-newton x)
+      ;; iteration step
+      (define (sqrt-iter guess)
+        (if (good-enough? guess)
+            guess
+            (sqrt-iter (improve guess))))
+
+      ;; test if we are already good enough with our guess
+      (define (good-enough? guess)
+        (<= (abs (- (square guess) x)) 0.0001))
+
+      ;; square a number
+      (define (square n) (* n n))
+
+      ;; improve a guess
+      (define (improve guess)
+        (avarage guess (/ x guess)))
+
+      (define (avarage a b)
+        (/ (+ a b) 2.0))
+
+      ;; start the iteration with 1 as initial guess
+      (sqrt-iter 1))
+
+    ;; test the function
+    (sqrt-newton 4)
+  #+end_src
+
+  Das Ergebnis des Tests:
+  #+RESULTS:
+  : 2.0000000929222947
+
+* (Haus-)aufgaben
+  * 1.1
+  * 1.3
+  * 1.8
+
+* Wiederholung: Funktionen & Blockstruktur
+** Aufgabe 1.3
+   Hier ist eine Beispielloesung fuer die Aufgabe 1.3 aus dem Buch:
+   
+   #+begin_src scheme
+     (define (add-and-mult a b c)
+       (define (second-greatest m n o)
+         (if (and (<= m n) (<= m o))
+             (min n o)
+             (if (and (<= n m) (<= n o))
+                 (min m o)
+                 (min m n))))
+       (define greatest max)
+       (define (square x) (* x x))
+       (+ (square (second-greatest a b c)) 
+          (square (greatest a b c))))
+
+     ;; test the function
+     (add-and-mult 4 2 3)
+   #+end_src
+
+   Das Ergebnis des Tests:
+   #+RESULTS:
+   : 25
+
+** Aufgabe 1.8
+   Zum Loesen der Aufgabe 1.8 verwenden wir die selbe Strategie wie
+   fuer das Finden der Quadratwurzel.  Wir veraendern allerdings die
+   =improve=-Funktion.
+
+   #+begin_src scheme
+     (define (cuberoot-newton x)
+       (define (cubert-iter guess)
+         (if (good-enough? guess)
+             guess
+             (cubert-iter (improve guess))))
+       (define (good-enough? guess)
+         (>= 0.001
+             (abs (- (cube guess) x))))
+
+       ;; new improve function
+       (define (improve guess)
+         (/ (+ (* 2. guess) (/ x (square guess)))
+            3.))
+
+       (define (cube n) (* n (square n)))
+       (define (square n) (* n n))
+       (cubert-iter 1))
+
+     ;; test the function
+     (cuberoot-newton 125.0)
+   #+end_src
+ 
+   #+RESULTS:
+   : 5.000000000287929
+
+* Rekursion
+  Wir wollen die Fakultaet einer Zahl berechnen.  Dazu Uebertragen wir
+  die definition der Fakultaet in Scheme.
+
+  \begin{align}
+    !x &= x \cdot !(x - 1) \\
+    !0 &= 1
+  \end{align}
+
+  Eine intuitivie Definition der Fakultaet koennte folgende sein:
+  #+begin_src scheme
+    (define (factorial x)
+      (if (<= x 1)
+          1                           ;; base case
+          (* x (factorial (- x 1))))) ;; recursive step
+
+    ;; test the function
+    (factorial 6)
+  #+end_src
+
+  Das Ergebnis unseres Tests:
+  #+RESULTS:
+  : 720
+
+  Dies ist eine vereinfachte Darstellung der Auswertung der obigen
+  Funktion.  Wie wir sehen koennen, benoetigt die Funktion "linear
+  viel" Speicher.
+  #+begin_src scheme
+    (factorial 5)
+    (* 5 (factorial 4))
+    (* 5 (* 4 (factorial 3)))
+    (* 5 (* 4 (* 3 (factorial 2))))
+    (* 5 (* 4 (* 3 (* 2 (factorial 1)))))
+    (* 5 (* 4 (* 3 (* 2 1))))
+    (* 5 (* 4 (* 3 2)))
+    (* 5 (* 4 6))
+    (* 5 24)
+    120
+  #+end_src
+
+  Unser Ziel ist es, nur konstant viel Speicher -- also unabhaengig
+  von der eingegebnene Zahl -- zu verbrauche.  Dazu wandeln wir die
+  rekursive Definition der Fakultaet in einen iterativen Prozess um.
+  #+begin_src scheme
+    (define (factorial x)
+      (define (iter accu count)
+        (if (= count x)
+            (* count accu)
+            (iter (* accu count) (+ count 1))))
+      (iter 1 1))
+
+    (factorial 5)
+  #+end_src
+
+  #+RESULTS:
+  : 120
+
+  Fuer eine Iteration benoetigen wir (genauso wie in Python und Co)
+  nur konstant viel Speicher.  Hier ist dargestellt wie der
+  Interpreter den Funktionskoerper der obigen Funktion auswerten
+  koennte.
+  #+begin_src scheme
+    (define x 3)
+    (iter 1 1)
+    (iter 1 2)
+    (iter 2 3)
+    6
+  #+end_src
+
+** Fibonacci
+   
+   Die ersten 10 Elemente der Fibonaccireihe.
+
+   | fib(n) | 0 | 1 | 1 | 2 | 3 | 5 | 8 | 13 | 21 | 34 |
+   |--------+---+---+---+---+---+---+---+----+----+----+
+   | n      | 1 | 2 | 3 | 4 | 5 | 6 | 7 |  8 |  9 | 10 |
+
+   Eine rekursive Definition der Reihe:
+   \begin{equation}
+     fib(n) = fib(n -1) + fib(n - 2)
+   \end{equation}
+
+   Hier ist eine Pseudoimplementation der Fibnoaccireihe:
+   #+begin_src
+     int a <- 0
+     int b <- 1
+     for i in (3..n)
+       int c <- a + b
+       a <- b
+       b <- c
+     return b
+   #+end_src
+
+   Als Uebungsvorschlag: Du koenntest versuchen, die Fibonaccireihe
+   als Rekursion & Iteration zu implementieren (Siehe Fakultaet).
+
+* Wiederholung: Rekursion & Iteration
+
+  Eine rekursive Beispielimplementation:
+  #+begin_src scheme
+    (define (fib-rec n)
+      (cond ((< n 1) (error "FIB-REC: index to small"))
+            ((= n 1) 0)
+            ((= n 2) 1)
+            ((> n 2) (+ (fib-rec (- n 1)) (fib-rec (- n 2))))))
+    (fib-rec 10)
+  #+end_src
+
+  #+results:
+  : 34
+
+  Hier ist eine iterative Beispielimplementation der Fibonaccizahlen.
+  #+begin_src scheme
+    (define (fib-iter n)
+      (define (iter counter n-1 n-2)
+        (if (= counter n)
+            n-1
+            (iter (1+ counter) (+ n-1 n-2) n-1)))
+
+      (cond ((= n 1) 0)
+            ((= n 2) 1)
+            (else (iter 2 1 0))))
+  #+end_src
+
+  #+results:
+  : 34
+
+* Listen
+  Listen bestehen aus Paaren.
+
+** Paare
+   Paare sind zusammengesetzte Datenstrukturen, das heisst, dass sich
+   Paare in kleinere Bestandteile zerlegen lassen und, vor allem, sich
+   aus kleineren Bestandteilen zusammen bauen lassen.
+
+   Paare sind "Behaelter", die genau 2 Werte speichern koennen.  Es
+   gibt einen "ersten" Wert und einen "zweiten" Wert, eindeutig
+   Adressierbar sein muessen.
+
+   Es folgt eine Beispielinterface fuer das Programmieren mit Paaren:
+   #+begin_src scheme
+     (define (pair a b)
+       (error "PAIR: undefined"))
+     (define (1st p)
+       (error "1ST: undefined"))
+     (define (2nd p)
+       (error "2ND: undefined"))
+
+     ;; What would you get?
+     (1st (pair 1 2)) ;; 1
+     (2nd (pair 1 2)) ;; 2
+
+     (1nd (2nd (2nd (pair 1 
+                          (pair 2
+                                (pair 3
+                                      4))))))
+     ;; 3
+   #+end_src
+
+*** Und in Scheme?
+    In Scheme sind die =pair=-, =1st=- und =2nd=-Funktion schon definiert.
+    pair == cons
+    1st == car
+    2nd == cdr
+
+    Beispiel fuer =car=:
+    #+begin_src scheme
+      (define new-pair (cons 1 2))
+      (car new-pair)
+    #+end_src
+
+    #+results:
+    : 1
+
+    Beispiel fuer =cdr=:
+    #+begin_src scheme
+      (define new-pair (cons 1 2))
+      (cdr new-pair)
+    #+end_src
+
+    #+results:
+    : 2
+
+    Andere nuetzliche Funktionen im Zusammenhang mit Paaren:
+    #+begin_src scheme
+      (pair? (cons 1 2)) ;; #t
+      (pair? 1) ;; #f
+
+      #nil ;; #nil ist der sogenannte Nullzeiger und signalisiert KEINEN
+           ;; Wert.
+      (null? #nil) ;; #t
+      (null? 1) ;; #f
+    #+end_src
+
+** Definition der Primitiven
+   Hier ist eine Definition von "Paaren" (ohne =pair?=).
+   #+name: custom-definition-pairs
+   #+begin_src scheme
+     (define (my-cons a b)
+       (define (dispatch mode)
+         (cond ((= mode 1) a)
+               ((= mode 2) b)
+               (else (error "COND: Argument not [1..3] -- " mode))))
+       dispatch)
+
+     (define (my-car list)
+       (list 1))
+
+     (define (my-cdr list)
+       (list 2))
+   #+end_src
+
+   Auswertung der Implementation per Befehlssubstitution:
+   #+begin_src scheme
+     ;; testevaluation (KOMMENTIEREN)
+     (my-car (my-cons 5 8))
+     ;; zuerst werten wir den Rueckgabewert von my-cons aus.  my-cons gibt
+     ;; uns eine Funktion zurueck (dispatch), die hier durch das lambda
+     ;; dargestellt wird.
+     (my-car (lambda (mode) (cond ((= mode 1) 5)
+                                  ((= mode 2) 8))))
+
+     ;; Jetzt wird my-car ausgewertet.  my-car "bewirkt" dass das Argument
+     ;; (also in diesem Fall die "lambda"-Funktion ein Argument bekommt und
+     ;; dann ausgewertet wird.
+     ((lambda (mode)
+        (cond ((= mode 1) 5)
+              ((= mode 2) 8)))
+      1)
+
+     ;; Nun wird der Aufruf der "lambda"-Funktion durch den Koerper der
+     ;; Funktion ersetzt.
+     ((define mode 1)
+      (cond ((= mode 1) 5)
+            ((= mode 2) 8)))
+     5
+   #+end_src
+
+** Jetzt wirklich Listen
+   Listen sind in Scheme einfach nur "geschachtelte" Paare.
+   #+caption: definitions-lists
+   #+name: definitions-lists
+   #+begin_src scheme :tangle definitions-list.scm
+     (define empty-list #nil)
+
+     (define (list-empty? list) (null? list))
+
+     ;; put an element in front of the list
+     (define (prepend elem list)
+       (cons elem list))
+
+     ;; put an element in the end of a list
+     (define (append list elem)
+       (if (null? list)
+           (cons elem #nil)
+           (cons (car list) (append (cdr list) elem))))
+
+     ;; get the first element of a list
+     (define (head list)
+       (cond ((pair? list) (car list))
+             ((null? list) (error "HEAD: list is empty"))
+             (else (error "HEAD: object is not a list"))))
+
+     ;; get all but the first element of a list
+     (define (tail list)
+       (cond ((pair? list) (cdr list))
+             ((null? list) (error "TAIL: list is empty"))
+             (else (error "TAIL: object is not a list"))))
+
+     ;; get all but the last element of a list
+     (define (init list)
+       (cond ((null? list) (error "INIT: empty list given"))
+             ((null? (cdr list)) #nil)
+             (else (cons (car list)
+                         (init (cdr list))))))
+
+     ;; get the last element of a list
+     (define (last list)
+       (cond ((null? list) (error "LAST: empty list given"))
+             ((null? (cdr list)) (car list))
+             (else (last (cdr list)))))
+
+     ;; get the n-th element of a list (starting with 0)
+     (define (index list n)
+       (if (= n 0)
+           (car list)
+           (index (cdr list) (1- n))))
+   #+end_src
+
+** Generalisierung
+   Wenn wir mit Listen zu tun haben, dann kommen bestimmte "Probleme"
+   oft vor.  Betrachten wir zum Beispiel das folgende Stueckchen Code:
+
+   #+name: map-example-01
+   #+begin_src scheme :tangle map-example-01.scm :noweb no-export
+     <<definitions-lists>>
+
+     ;; This procedure adds 1 to every element
+     (define (add-one list)
+       (if (list-empty? list)
+           empty-list
+           (prepend (1+ (head list))
+                    (add-one (tail list)))))
+
+     (define numbers '(1 2 3 4))
+     (display "The original list is ")
+     (write numbers)
+     (newline)
+     (display "add-one applied to the list results in ")
+     (write (add-one numbers))
+     (newline)
+
+     ;; This procedure multiplies every element by 2
+     (define (mult-two list)
+       (if (list-empty? list)
+           empty-list
+           (prepend (* 2 (head list))
+                    (mult-two (tail list)))))
+
+     (define numbers '(1 2 3 4))
+     (display "The original list is ")
+     (write numbers)
+     (newline)
+     (display "mult-two applied to the list results in ")
+     (write (mult-two numbers))
+     (newline)
+   #+end_src
+
+   Beide Funktionen machen etwas sehr Aehnliches.  Es wird ueber eine
+   Liste iteriert.  Dabei wird auf jedes Element eine Operation
+   angewendet und so eine neue Liste erzeugt.
+
+   #+begin_example scheme
+     (define (<function> list)
+       (if (list-empty? list)
+           empty-list
+           (prepend (<operation> (head list))
+                    (<function> (tail list)))))
+   #+end_example
+
+   Die Generalisierung dieser beider Funktionen wird =map= genannt.
+   Wir koennen diese Idee allgemein in Scheme formulieren:
+
+   #+caption: definition-map
+   #+name: definition-map
+   #+begin_src scheme
+     (define (map operation list)
+       (if (list-empty? list)
+           empty-list
+           (prepend (operation (head list))
+                    (map operation (tail list)))))
+   #+end_src
+
+** Hausaufgabe
+   Wir stellen uns einmal vor, dass wir eine Liste von Zahlen gegeben
+   haben und wollen alle Zahlen aufsummieren.  Der Code dafuer wurde
+   wohl in etwa folgendermasse aussehen:
+
+   #+begin_src scheme :tangle sum-example.scm :noweb no-export
+     <<definitions-lists>>
+
+     (define (sum-list list)
+       (define (iter accu current)
+         (if (list-empty? current)
+             accu
+             (iter (+ accu (head current)) (tail current))))
+       (iter 0 list))
+
+     (define numbers '(1 2 3 4 5 6))
+     (display "The sum of ")
+     (write numbers)
+     (display " is ")
+     (write (sum-list numbers))
+     (newline)       
+   #+end_src
