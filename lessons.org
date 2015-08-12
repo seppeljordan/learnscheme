@@ -492,4 +492,5 @@
 
    Wie koennen wir diese Funktion generalisieren?  Wenndu im Internet
    recherchieren willst, dann suche nach den Stichworten =fold=, =left
-   fold=, =foldl=, wie zum Beispiel [[https://duckduckgo.com/?q%3Dscheme%2Bfold&t%3Dffab][hier]] geschehen.
+   fold=, =foldl=, wie zum Beispiel [[https://duckduckgo.com/?q%3Dscheme%2Bfold&t%3Dffab][hier]] (der Link funktioniert aus
+   irgendeineem Grund nicht auf der github-Seite) geschehen.
