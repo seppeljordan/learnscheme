@@ -354,6 +354,9 @@
    #+caption: definitions-lists
    #+name: definitions-lists
    #+begin_src scheme :tangle definitions-list.scm
+     ;; definitions-lists
+     ;;;;;;;;;;;;;;;;;;;;
+     
      (define empty-list #nil)
 
      (define (list-empty? list) (null? list))
@@ -486,3 +489,7 @@
      (write (sum-list numbers))
      (newline)       
    #+end_src
+
+   Wie koennen wir diese Funktion generalisieren?  Wenndu im Internet
+   recherchieren willst, dann suche nach den Stichworten =fold=, =left
+   fold=, =foldl=, wie zum Beispiel [[https://duckduckgo.com/?q%3Dscheme%2Bfold&t%3Dffab][hier]] geschehen.
