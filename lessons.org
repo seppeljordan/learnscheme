@@ -16,8 +16,23 @@
    * [[https://mitpress.mit.edu/sicp/][Structure and Interpretation of Computer Programs]] :: Das Buch
         zum Kurs
 
+* Anleitung fuer dieses Dokument
+  Am meisten Spass habt ihr mit diesem Dokument, wenn ihr es in GNU
+  Emacs oeffnet.  Ich habe es in einem speziellen Format ([[http://orgmode.org/][org-mode]])
+  verfasst, dass das arbeiten mit Fliesstext und Code sehr komfortabel
+  macht.  Viele Codebeispiele sind ausfuehrbare Programme.  Sie
+  koennen mit einem Befehl aus dem Dokument extrahiert werden: =Strg +
+  c, Strg + v, t=, sprich erst Steuerung und "c" druecken, dann
+  Steuerung und "v" druecken und zu letzt "t" druecken.  Dies erzeugt
+  im selben Verzeichnis, in dem auch diese Datei liegt Dateien mit der
+  Endung =.scm=, die dann mittels =guile= ausgefuehrt werden koennen.
+  Das Dokument kann auch in ein gut lesbares HTML-Dokument umgewandelt
+  werden, per Tastenkombination =Alt + x, org-html-export-to-html=
+  (sprich: erst =Alt + x= druecken, dann "org-html-export-to-html"
+  eingeben und dann "Enter" drucken).
+
 * Ein Beispiel: Wurzel nach Newtonverfahren
-  #+begin_src scheme
+  #+begin_src scheme :tangle sqrt-newton.scm
     (define (sqrt-newton x)
       ;; iteration step
       (define (sqrt-iter guess)
@@ -43,12 +58,17 @@
       (sqrt-iter 1))
 
     ;; test the function
-    (sqrt-newton 4)
+    (define test (sqrt-newton 4))
+    (display "Die Wurzel von 4 ist ")
+    (display test)
+    test
   #+end_src
 
-  Das Ergebnis des Tests:
   #+RESULTS:
   : 2.0000000929222947
+
+  Diese Beispiel findest du unter dem Namen =sqrt-newton.scm=, wenn du
+  die =.scm=-Dateien gemaess der obigen Anleitung erzeugt hast.
 
 * (Haus-)aufgaben
   * 1.1
