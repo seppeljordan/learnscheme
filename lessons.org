@@ -15,6 +15,7 @@
             installiert ist (Vi)
    * [[https://mitpress.mit.edu/sicp/][Structure and Interpretation of Computer Programs]] :: Das Buch
         zum Kurs
+   * Guile
 
 * Anleitung fuer dieses Dokument
   Am meisten Spass habt ihr mit diesem Dokument, wenn ihr es in GNU
@@ -32,6 +33,7 @@
   eingeben und dann "Enter" drucken).
 
 * Ein Beispiel: Wurzel nach Newtonverfahren
+  #+caption: =sqrt-newton.scm=
   #+begin_src scheme :tangle sqrt-newton.scm
     (define (sqrt-newton x)
       ;; iteration step
@@ -328,6 +330,7 @@
 
 ** Definition der Primitiven
    Hier ist eine Definition von "Paaren" (ohne =pair?=).
+   #+caption: =<<custom-definition-pairs>>=
    #+name: custom-definition-pairs
    #+begin_src scheme
      (define (my-cons a b)
@@ -372,9 +375,9 @@
 
 ** Jetzt wirklich Listen
    Listen sind in Scheme einfach nur "geschachtelte" Paare.
-   #+caption: definitions-lists
+   #+caption: =<<definitions-lists>>=
    #+name: definitions-lists
-   #+begin_src scheme :tangle definitions-list.scm
+   #+begin_src scheme :tangle definitions-lists.scm
      ;; definitions-lists
      ;;;;;;;;;;;;;;;;;;;;
      
@@ -428,7 +431,7 @@
    Wenn wir mit Listen zu tun haben, dann kommen bestimmte "Probleme"
    oft vor.  Betrachten wir zum Beispiel das folgende Stueckchen Code:
 
-   #+name: map-example-01
+   #+caption: =map-example-01.scm=
    #+begin_src scheme :tangle map-example-01.scm :noweb no-export
      <<definitions-lists>>
 
@@ -478,14 +481,30 @@
    Die Generalisierung dieser beider Funktionen wird =map= genannt.
    Wir koennen diese Idee allgemein in Scheme formulieren:
 
-   #+caption: definition-map
+   #+caption: =<<definition-map>>=
    #+name: definition-map
-   #+begin_src scheme
+   #+begin_src scheme :noweb no-export
      (define (map operation list)
        (if (list-empty? list)
            empty-list
            (prepend (operation (head list))
                     (map operation (tail list)))))
+   #+end_src
+
+   #+begin_src scheme :noweb no-export :tangle map-example-02.scm
+     <<definitions-lists>>
+     <<definition-map>>
+
+     (define (add-one list)
+       (map 1+ list))
+
+     (define (mult-two list)
+       (map (lambda (x)
+              (* 2 x))
+            list))
+
+     (write (mult-two '(1 2 3 4 5)))
+     (write (add-one '(1 2 3 4 5)))
    #+end_src
 
 ** Hausaufgabe
@@ -494,6 +513,7 @@
    wohl in etwa folgendermasse aussehen:
 
    #+begin_src scheme :tangle sum-example.scm :noweb no-export
+     ;; We have to include the definitions for our list primitives
      <<definitions-lists>>
 
      (define (sum-list list)
@@ -511,7 +531,348 @@
      (newline)       
    #+end_src
 
-   Wie koennen wir diese Funktion generalisieren?  Wenndu im Internet
+   Wie koennen wir diese Funktion generalisieren?  Wenn du im Internet
    recherchieren willst, dann suche nach den Stichworten =fold=, =left
    fold=, =foldl=, wie zum Beispiel [[https://duckduckgo.com/?q%3Dscheme%2Bfold&t%3Dffab][hier]] (der Link funktioniert aus
    irgendeineem Grund nicht auf der github-Seite) geschehen.
+
+*** Loesung
+    Die =sum-list= Funktion macht prinzipiell 2 Dinge:
+    1. Die Funktion iteriert ueber die List (so wie in =map=).
+    2. Die Funktion akkumuliert Werte, die in der Liste gespeichert
+       sind mittels einer Kombinationsfunktion.
+
+    #+caption: =<<definition-foldl>>=
+    #+name: definition-foldl
+    #+begin_src scheme
+      (define (foldl accu-fun start list)
+        (cond ((list-empty? list) start)
+              (else (foldl accu-fun
+                           (accu-fun start (head list))
+                           (tail list)))))
+
+    #+end_src
+
+    Wir koennen nun die =foldl=-Funktion fuer verschiedene Dinge nutzen:
+    #+begin_src scheme :tangle foldexamples.scm :noweb no-export
+      ;; We have to include list primitives
+      <<definitions-lists>>
+      ;; ... and foldl
+      <<definition-foldl>>
+      <<definition-map>>
+
+      ;; The sum function
+      (define (sum list) (foldl + 0 list))
+
+      ;; The length function
+      (define (length list)
+        (foldl (lambda (accu e)
+                 (1+ accu))
+               0
+               list))
+
+      (define (length-fancy list)
+        (sum (map (lambda (x) 1) list)))
+
+      (define (map-pair fun pair)
+        (cons (fun (car pair)) (fun (cdr pair))))
+
+      (define (foldl-pair fun start pair)
+        (fun (fun start (car pair)) (cdr pair)))
+
+      (list 1+ (lambda (x) (* 2 x)))
+      (define wert 10)
+
+      ;; We can even define a filter function
+      (define (filter predicate list)
+        (foldl (lambda (accu-list current)
+                 (if (predicate current)
+                     (append accu-list current)
+                     accu-list))
+               empty-list
+               list))
+    #+end_src
+
+    #+name: definition-filter
+    #+begin_src scheme
+      (define (filter pred list)
+        (foldr (lambda (x accu)
+                 (if (pred x)
+                     (prepend x accu)
+                     accu))
+               empty-list
+               list))
+    #+end_src
+
+** foldr
+   Manchmal wollen wir aber auch ueber eine Liste von "hinten" aus
+   iterieren.  Aehnlich wie =foldl= wollen wir eine
+   Accumulationsfunktion und einen Startwert angeben koennen.  Die
+   Funktion soll dabei jedes Element nur einmal ansehen.
+
+   #+name: definition-foldr
+   #+begin_src scheme
+     (define (foldr f start list)
+       (cond ((null? list) start)
+             (else (f (car list)
+                      (foldr f start (cdr list))))))
+   #+end_src
+
+** Hausaufgaben
+   * =mkList= :: Hat 1 Argument, n.  Soll Liste der Laenge n erzeugen,
+                 mit nur 1en drin.
+                 #+begin_src scheme
+                   (define (mkList n)
+                     (cond ((= n 0) #nil)
+                           (else (cons 1 (mkList (- n 1))))))
+
+                 #+end_src
+   * =mkNumbers= :: Hat 1 Argument, n.  Soll Liste erzeugen, mit den
+                    Zahlen 1 bis n.
+                    #+begin_src scheme
+                      (define (mkNumbers n)
+                        (define (iter current)
+                          (cond ((= current n) #nill)
+                                ((< current n)
+                                 (cons (+ 1 current) (iter (+ 1 current))))
+                                (else (error "Internal error"))))
+                        (iter 0))
+
+                      (define (mkNumbers2 n)
+                        (define (iter current acc)
+                          (cond ((= current n) acc)
+                                ((< current n) (iter (+ 1 current) (append acc (+ 1 current))))))
+                        (iter 0 #nil))
+
+                      (define (mkNumber3 n)
+                        (if (= n 0)
+                            #nil
+                            (append (mkNumber3 (- n 1)) n)))
+
+
+                    #+end_src
+   * =iter-list= :: Hat 3 Argumente
+     * iter-fun :: Ist eine Funktion, die ein Argument hat
+     * start-val :: Hat den passenden Typen zu iter-fun
+     * n :: Integer, so viele Elemente soll die Liste am Ende haben
+     #+name: definition-iter-list.scm
+     #+begin_src scheme :tangle iter-list.scm
+       (define (iter-list fun start len)
+         (define (iter current current-elem)
+           (cond ((= current len) #nil)
+                 ((< current len)
+                  (cons current-elem (iter (+ 1 current) (fun current-elem))))
+                 (else (error "Internal error"))))
+         (iter 0 start))
+     #+end_src               
+
+   #+begin_src scheme
+     (iter-list 1+ 0 10)
+     ;; '(0 1 2 3 4 5 6 7 8 9)
+
+     (iter-list (lambda (x) (cons 1 x)) empty-list 3)
+     ;; '(#nil '(1) '(1 1)) 
+   #+end_src
+
+** The List dropth the List taketh
+   Manchmal sind wir an den ersten n Elementen einer Liste
+   interessiert.  Nehmen wir an, wir wollen 
+
+** Was noch fehlt... Sortieren!
+   Wir haben gelernt, wie wir
+
+   * Listen (mit Hilfe von "higher order functions" erzeugen koenne
+   * primitive Operationen auf Listen durchfuehren koennen, die
+     einzelne Elemente der Liste manipulieren
+   * wiederkehrende Operationen abstrahieren koennen und "higher order
+     functions" nutzen koennen um weniger ( = besseren) Code zu
+     schreiben.
+
+   Wir haben noch nicht gelernt, wie wir Listen sortieren.  Hier ist
+   eine Beispielimplementation von Quicksort.  Sie sortiert eine Liste
+   von Zahlen aufsteigend der Groesse nach.
+
+   #+begin_src scheme :tangle quicksort-example.scm :noweb no-export
+     <<definitions-lists>>
+     <<definition-map>>
+     <<definition-foldl>>
+     <<definition-foldr>>
+     <<definition-filter>>
+
+     (define (concat l1 l2)
+       (foldr (lambda (x accu)
+                (prepend x accu))
+              l2
+              l1))
+
+     (define (concat3 l1 l2 l3)
+       (concat l1
+               (concat l2 l3)))
+
+     (define (quicksort numbers)
+       (define (qs)
+         (let* ((pivot (head numbers))
+                (lower (filter (lambda (x) (< x pivot))
+                               (tail numbers)))
+                (bigger (filter (lambda (x) (>= x pivot))
+                                (tail numbers))))
+           (begin
+             (write lower)
+             (display " ")
+             (write pivot)
+             (display " ")
+             (write bigger)
+             (newline)
+             (concat3 (quicksort lower)
+                      (list pivot)
+                      (quicksort bigger)))))
+       
+       (cond ((list-empty? numbers) empty-list)
+             (else (qs))))
+   #+end_src
+
+   Leider ist die Verwendung dieser Funktion darauf beschraenkt,
+   Zahlen der Groesse nach zu sortieren. Wir koennen diese
+   Beispielimplementation abstrahieren, indem wir "offen" lassen,
+   welche Vergleichsoperation beim Vergleich verwendet werden soll.
+   Auf diese Art koennen wir alle Listen nach beliebigen Kriterien
+   sortieren.
+
+   #+name: definition-sort
+   #+begin_src scheme
+     (define (quicksort smaller-than xs)
+       (if (list-empty? xs)
+           empty-list
+           (let*
+               ((pivot (head xs))
+                (non-pivot (tail xs))
+                (< (lambda (x) (smaller-than x pivot)))
+                (>= (lambda (x) (not (smaller-than x pivot))))
+                (smaller (filter < non-pivot))
+                (bigger (filter >= non-pivot)))
+             (concat3 (quicksort smaller-than smaller)
+                      (list pivot)
+                      (quicksort smaller-than bigger)))))
+
+     ;; Hier ist noch eine Implementation von mergesort
+     (define (mergesort smaller-or-equal-than xs)
+       (define (merge as bs)
+         (cond ((list-empty? as) bs)
+               ((list-empty? as) bs)
+               (else (let
+                         ((a (head as))
+                          (b (head bs)))
+                       (if (smaller-or-equal-than a b)
+                           (prepend a
+                                    (merge (tail as) bs))
+                           (prepend b
+                                    (merge as (tail bs))))))))
+       (let*
+           ((len (length xs))
+            (first-half (take (quotient len 2) xs))
+            (second-half (drop (quotient len 2) xs)))
+         (merge (mergesort smaller-or-equal-than first-half)
+                (mergesort smaller-or-equal-than second-half))))
+   #+end_src
+   
+   Der Vollstaendigkeit halber, hier noch einmal die Definition von
+   =concat3= sauber notiert.
+
+   #+name: definition-concat.scm
+   #+begin_src scheme
+     (define (concat l1 l2)
+       "Concatenate l1 with l2"
+       ;; We choose foldr to prepend all the elements of l1 to l2.  If we
+       ;; chose to fold from the left and append every element of l2 to l1,
+       ;; we would had a runtime behavior of O(n*m + n^2/2) where
+       ;;
+       ;; * n = length of l1
+       ;; * m = length of l2
+       ;;
+       ;; This way we have O(n) as runtime behavior. (Why?)
+       (foldr (lambda (current accu)
+                (prepend current accu))
+              l2
+              l1))
+
+     (define (concat3 l1 l2 l3)
+       "Concatenate 3 lists l1 l2 l3"
+       ;; First we concatenate l3 and l2, which in turn gets concatenated
+       ;; with l1, which gives us a runtime behavior of $ O(n + m) $ where
+       ;;
+       ;; * n = length of l1
+       ;; * m = length of l2
+       ;; ( What would be the runtime behavior of
+       ;;   (concat (concat l1 l2) l3)
+       ;;   ?)
+       (concat l1
+               (concat l2
+                       l3)))
+   #+end_src
+
+** Zusammenfassung, eine kleine Library
+   Bis hier her haben wir uns angesehen, was wir alles mit Listen
+   anstellen koennen.  Wir haben gelernt wie wir Listen als Paare
+   darstellen koennen und haben sogar Paare als Funktionen
+   dargestellt.  Wir haben mathematische Probleme effizient geloest
+   (Fibonacci, Fakultaet) und daraus wiederkehrende Prozesse zu
+   Funktionen abstrahiert.  Die Funktionen, die wir dabei definiert
+   haben, koennen wir zu einer Library zusammenfassen.  Wir nennen sie
+   =lists.scm=.
+   
+   #+name: lists.scm
+   #+caption: lists.scm
+   #+begin_src scheme :tangle lists.scm :noweb no-export
+     <<definitions-lists>>
+     <<definition-map>>
+     <<definition-foldl>>
+     <<definition-foldr>>
+     <<definition-filter>>
+     <<definition-iter-list>>
+     ;; We have to define concat3 before the sorting algorithms because we
+     ;; use these in their definition.
+     <<definition-concat>>
+     <<definition-sort>>
+   #+end_src
+
+* Streams
+  Streams sind (so, wie Listen auch) Abstaktionen ueber Daten.  Wir
+  stellen uns Streams als (un-)endlich lange Sammlung von Daten vor,
+  die wir nacheinander abrufen koennen.  Ein Stream muss folgenden
+  Gesetzmaessigkeiten gehorchen:
+
+  * =(car-stream (cons-stream a b))= = =a=
+  * =(cdr-stream (const-stream a b))= = =b=
+
+  Das sieht ja erstmal genauso wie die Definition einer Liste aus.  Es
+  gibt aber einen kleinen Unterschied zwischen Listen uns Streams:
+  Streams berechnen ihr die enthaltenen Werte nur auf Abruf.
+
+  #+begin_src scheme :tangle strict-map.scm :noweb no-export
+    <<definitions-lists>>
+    <<definition-map>>
+
+    (define (print-and-mult-2 x)
+      (display x)
+      (newline)
+      (* 2 x))
+
+    (head (map print-and-mult-2 (list 1 2 3 4)))
+  #+end_src
+
+* Baeume
+  Baeume sind genauso wie Listen in erster Linie eine Abstraktion
+  ueber Daten.  Listen abstrahieren Daten als eine Sequence die von
+  vorne nach hinten durchgeblaettert werden kann.  Das soll uns
+  ermoeglichen, ueber Daten als eine Einheit nachdenken zu koennen.
+
+  Listen sind fuer viele Dinge gut, vor allem wenn es um iterative
+  Prozesse geht.  Fuer manche Dinge eignen sich Listen allerdings
+  nicht so gut, wie zum Beispiel das Finden von Daten, welches nur mit
+  einer Zeitkomplexitaet von $O(n)$ realisiert werden kann, selbst
+  wenn die Liste bereits sortiert ist.  Listen sind auch nicht so
+  toll, wenn es um das hinzufuegen neuer Daten geht.  Das hinzufuegen
+  eines Elements zum Beginn einer Liste geht schnell, aber alles
+  andere dauert viel laenger.  Zur Erinnerung: Die =append=-Funktion
+  muss bis ans Ende der Liste iterieren, wenn es Element angehaengt
+  werden soll.

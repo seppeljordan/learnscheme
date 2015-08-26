@@ -1,0 +1,13 @@
+* Nur noch 3 Sitzungen?
+** Ferien?
+   Es wird den gesamten September ueber Ferien geben.  Der Kurs findet
+   waerend dieser Zeit als Uebung weiterhin statt, wobei keine neuen
+   Themen in dieser Zeit angefangen werden.
+** Rythmus?
+   Es wird im Oktober geklaert, wann der 2-wochige Turnus beginnt.
+
+* Projekt
+  In den Ferien werden Listen und Rekursion vertieft und wiederholt.
+  Nach den Ferien werden Baeume "behandelt" und dann fangen wir mit
+  den Projekt an.  Im Rahmen des Projekts wird Ein- und Ausgabe
+  genauer beleuchtet.
