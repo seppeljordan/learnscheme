@@ -822,7 +822,7 @@
    
    #+name: lists.scm
    #+caption: lists.scm
-   #+begin_src scheme :tangle lists.scm :noweb no-export
+   #+begin_src scheme :tangle lib/lists.scm :noweb no-export
      <<definitions-lists>>
      <<definition-map>>
      <<definition-foldl>>
