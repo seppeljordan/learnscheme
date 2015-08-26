@@ -14,8 +14,8 @@
 * Einfuehrung
 ** Themen
    * Rekursion
-   * Concurrency
    * Streams & Lazy evaluation
+   * Concurrency
 
 ** Material
    * [[https://www.gnu.org/software/emacs/][Emacs]] :: Programmiereditor mit gutem LISP-Support
@@ -24,7 +24,7 @@
    * [[https://mitpress.mit.edu/sicp/][Structure and Interpretation of Computer Programs]] :: Ein wirklich
         sehr gutes Lehrbuch zum Thema
    * [[https://www.gnu.org/software/guile/][Guile]] :: Wir benutzen Guile als Schemeinterpreter
-   * [[http://orgmode.org/][org-mode]] :: Dieses Dokument ist mithilfe von org-mode verfasst.
+   * [[http://orgmode.org/][org-mode]] :: Dieses Dokument ist mit Hilfe von org-mode verfasst.
 
 * Anleitung fuer dieses Dokument
   Dieses Dokument enthaelt sehr viel Schemecode.  Du kannst den Code
@@ -38,8 +38,10 @@
   auf deinem System installiert ist.
 
 * Ein Beispiel: Wurzel nach Newtonverfahren
+  
+
   #+caption: =sqrt-newton.scm=
-  #+begin_src scheme :tangle sqrt-newton.scm
+  #+begin_src scheme :tangle examples/sqrt-newton.scm
     (define (sqrt-newton x)
       ;; iteration step
       (define (sqrt-iter guess)
@@ -71,10 +73,7 @@
     test
   #+end_src
 
-  #+RESULTS:
-  : 2.0000000929222947
-
-  Diese Beispiel findest du unter dem Namen =sqrt-newton.scm=, wenn du
+  Diese Beispiel findest du unter dem Namen =examples/sqrt-newton.scm=, wenn du
   die =.scm=-Dateien gemaess der obigen Anleitung erzeugt hast.
 
 * (Haus-)aufgaben
@@ -236,7 +235,7 @@
 
 * Wiederholung: Rekursion & Iteration
 
-  Eine rekursive Beispielimplementation:
+  Eine rekursive Beispielimplementation fuer die Fibonaccireihe:
   #+begin_src scheme
     (define (fib-rec n)
       (cond ((< n 1) (error "FIB-REC: index to small"))
@@ -382,7 +381,7 @@
    Listen sind in Scheme einfach nur "geschachtelte" Paare.
    #+caption: =<<definitions-lists>>=
    #+name: definitions-lists
-   #+begin_src scheme :tangle definitions-lists.scm
+   #+begin_src scheme :tangle examples/definitions-lists.scm
      ;; definitions-lists
      ;;;;;;;;;;;;;;;;;;;;
 
@@ -436,8 +435,8 @@
    Wenn wir mit Listen zu tun haben, dann kommen bestimmte "Probleme"
    oft vor.  Betrachten wir zum Beispiel das folgende Stueckchen Code:
 
-   #+caption: =map-example-01.scm=
-   #+begin_src scheme :tangle map-example-01.scm :noweb no-export
+   #+caption: =examples/map-01.scm=
+   #+begin_src scheme :tangle examples/map-01.scm :noweb no-export
      <<definitions-lists>>
 
      ;; This procedure adds 1 to every element
@@ -496,7 +495,11 @@
                     (map operation (tail list)))))
    #+end_src
 
-   #+begin_src scheme :noweb no-export :tangle map-example-02.scm
+   Im folgenden Stueckchen Code benutzen wir =map= um weitere
+   Funktionen zu definieren.
+   
+   #+caption: =examples/map-02.scm=
+   #+begin_src scheme :noweb no-export :tangle examples/map-02.scm
      <<definitions-lists>>
      <<definition-map>>
 
@@ -509,7 +512,9 @@
             list))
 
      (write (mult-two '(1 2 3 4 5)))
+     (newline)
      (write (add-one '(1 2 3 4 5)))
+     (newline)
    #+end_src
 
 ** Hausaufgabe
@@ -517,7 +522,8 @@
    haben und wollen alle Zahlen aufsummieren.  Der Code dafuer wurde
    wohl in etwa folgendermasse aussehen:
 
-   #+begin_src scheme :tangle sum-example.scm :noweb no-export
+   #+caption: =examples/sum.scm=
+   #+begin_src scheme :tangle examples/sum.scm :noweb no-export
      ;; We have to include the definitions for our list primitives
      <<definitions-lists>>
 
@@ -559,7 +565,8 @@
     #+end_src
 
     Wir koennen nun die =foldl=-Funktion fuer verschiedene Dinge nutzen:
-    #+begin_src scheme :tangle foldexamples.scm :noweb no-export
+    #+caption: =examples/foldl.scm=
+    #+begin_src scheme :tangle examples/foldl.scm :noweb no-export
       ;; We have to include list primitives
       <<definitions-lists>>
       ;; ... and foldl
@@ -575,18 +582,6 @@
                  (1+ accu))
                0
                list))
-
-      (define (length-fancy list)
-        (sum (map (lambda (x) 1) list)))
-
-      (define (map-pair fun pair)
-        (cons (fun (car pair)) (fun (cdr pair))))
-
-      (define (foldl-pair fun start pair)
-        (fun (fun start (car pair)) (cdr pair)))
-
-      (list 1+ (lambda (x) (* 2 x)))
-      (define wert 10)
 
       ;; We can even define a filter function
       (define (filter predicate list)
@@ -664,7 +659,7 @@
      * n :: Integer, so viele Elemente soll die Liste am Ende haben
      #+caption: =<<definition-iter-list.scm>>=
      #+name: definition-iter-list.scm
-     #+begin_src scheme :tangle iter-list.scm
+     #+begin_src scheme
        (define (iter-list fun start len)
          (define (iter current current-elem)
            (cond ((= current len) #nil)
@@ -682,7 +677,7 @@
      ;; '(#nil '(1) '(1 1))
    #+end_src
 
-** The List dropth the List taketh
+** The List dropth, the List taketh
    Manchmal sind wir an den ersten n Elementen einer Liste
    interessiert.  Wir koennen dann entsprechend oft =head= und =tail=
    anwenden.
@@ -692,11 +687,11 @@
        (list (head xs) (head (tail xs)) (head (tail (tail xs)))))
    #+end_src
 
-   Die Funktion =first-3-elems= gibt nimmt eine Liste entgegen und
-   gibt eine neue Liste zurueck, die die ersten 3 Elemente enthaelt.
-   Wir koennen diese Funktion abstrahieren zu einer einer Funktion,
-   die eine Liste und eine Zahl n entgegen nimmt und die ersten n
-   Elemente der Liste zurueck gibt.
+   Die Funktion =first-3-elems= nimmt eine Liste entgegen und gibt
+   eine neue Liste zurueck, die die ersten 3 Elemente enthaelt.  Wir
+   koennen diese Funktion zu einer allgemeineren Funktion
+   abstrahieren, die eine Liste und eine Zahl n entgegen nimmt und die
+   ersten n Elemente der Liste zurueck gibt.
 
    #+caption: =<<definition-take>>=
    #+name: definition-take
@@ -735,7 +730,8 @@
    eine Beispielimplementation von Quicksort.  Sie sortiert eine Liste
    von Zahlen aufsteigend der Groesse nach.
 
-   #+begin_src scheme :tangle quicksort-example.scm :noweb no-export
+   #+caption: =examples/quicksort.scm=
+   #+begin_src scheme :tangle examples/quicksort.scm :noweb no-export
      <<definitions-lists>>
      <<definition-map>>
      <<definition-foldl>>
@@ -896,8 +892,9 @@
   Das sieht ja erstmal genauso wie die Definition einer Liste aus.  Es
   gibt aber einen kleinen Unterschied zwischen Listen uns Streams:
   Streams berechnen ihr die enthaltenen Werte nur auf Abruf.
-
-  #+begin_src scheme :tangle strict-map.scm :noweb no-export
+  
+  #+caption: =examples/strict-map.scm=
+  #+begin_src scheme :tangle examples/strict-map.scm :noweb no-export
     <<definitions-lists>>
     <<definition-map>>
 

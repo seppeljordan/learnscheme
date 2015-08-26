@@ -3,6 +3,7 @@
 (defun make-examples ()
   ;; Create a lib directory to store our "libraries"
   (make-directory "lib" 1)
+  (make-directory "examples" 1)
   ;; Extract examples from lessons.org
   (org-babel-tangle))  
 

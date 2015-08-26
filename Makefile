@@ -1,4 +1,8 @@
-examples=sqrt-newton.scm definitions-lists.scm map-example-01.scm map-example-02.scm sum-example.scm foldexamples.scm iter-list.scm quicksort-example.scm lib/lists.scm strict-map.scm
+examples=examples/sqrt-newton.scm examples/definitions-lists.scm \
+	examples/map-01.scm examples/map-02.scm examples/sum.scm \
+	examples/foldl.scm examples/quicksort.scm lib/lists.scm \
+	examples/strict-map.scm
+
 pdfs=README.pdf
 
 all: ${examples} ${pdfs}
