@@ -18,19 +18,15 @@
    * Guile
 
 * Anleitung fuer dieses Dokument
-  Am meisten Spass habt ihr mit diesem Dokument, wenn ihr es in GNU
-  Emacs oeffnet.  Ich habe es in einem speziellen Format ([[http://orgmode.org/][org-mode]])
-  verfasst, dass das arbeiten mit Fliesstext und Code sehr komfortabel
-  macht.  Viele Codebeispiele sind ausfuehrbare Programme.  Sie
-  koennen mit einem Befehl aus dem Dokument extrahiert werden: =Strg +
-  c, Strg + v, t=, sprich erst Steuerung und "c" druecken, dann
-  Steuerung und "v" druecken und zu letzt "t" druecken.  Dies erzeugt
-  im selben Verzeichnis, in dem auch diese Datei liegt Dateien mit der
-  Endung =.scm=, die dann mittels =guile= ausgefuehrt werden koennen.
-  Das Dokument kann auch in ein gut lesbares HTML-Dokument umgewandelt
-  werden, per Tastenkombination =Alt + x, org-html-export-to-html=
-  (sprich: erst =Alt + x= druecken, dann "org-html-export-to-html"
-  eingeben und dann "Enter" drucken).
+  Dieses Dokument enthaelt sehr viel Schemecode.  Du kannst den Code
+  extrahieren, sofern du GNU Make und Emacs auf deinem System
+  installiert hast.  Fuehre einfach den Befehl
+  #+begin_src sh
+    make all
+  #+end_src
+  im Verzeichnis aus, in dem die Datei =lessons.org= liegt.  Eine
+  pdf-Version dieses Dokuments wird ebenfalls erzeugt, sofern =latex=
+  auf deinem System installiert ist.
 
 * Ein Beispiel: Wurzel nach Newtonverfahren
   #+caption: =sqrt-newton.scm=
@@ -593,6 +589,7 @@
                list))
     #+end_src
 
+    #+caption: =<<definition-filter>>=
     #+name: definition-filter
     #+begin_src scheme
       (define (filter pred list)
@@ -610,6 +607,7 @@
    Accumulationsfunktion und einen Startwert angeben koennen.  Die
    Funktion soll dabei jedes Element nur einmal ansehen.
 
+   #+caption: =<<definition-foldr>>=
    #+name: definition-foldr
    #+begin_src scheme
      (define (foldr f start list)
@@ -655,6 +653,7 @@
      * iter-fun :: Ist eine Funktion, die ein Argument hat
      * start-val :: Hat den passenden Typen zu iter-fun
      * n :: Integer, so viele Elemente soll die Liste am Ende haben
+     #+caption: =<<definition-iter-list.scm>>=
      #+name: definition-iter-list.scm
      #+begin_src scheme :tangle iter-list.scm
        (define (iter-list fun start len)
@@ -676,7 +675,42 @@
 
 ** The List dropth the List taketh
    Manchmal sind wir an den ersten n Elementen einer Liste
-   interessiert.  Nehmen wir an, wir wollen 
+   interessiert.  Wir koennen dann entsprechend oft =head= und =tail=
+   anwenden.
+
+   #+begin_src scheme
+     (define (first-3-elems xs)
+       (list (head xs) (head (tail xs)) (head (tail (tail xs)))))
+   #+end_src
+
+   Die Funktion =first-3-elems= gibt nimmt eine Liste entgegen und
+   gibt eine neue Liste zurueck, die die ersten 3 Elemente enthaelt.
+   Wir koennen diese Funktion abstrahieren zu einer einer Funktion,
+   die eine Liste und eine Zahl n entgegen nimmt und die ersten n
+   Elemente der Liste zurueck gibt.
+
+   #+caption: =<<definition-take>>=
+   #+name: definition-take
+   #+begin_src scheme
+     (define (take n xs)
+       (cond ((= n 0) empty-list)
+             ((list-empty? xs)
+              (error "-- TAKE: tried to get an element from the empty list"))
+             (else (cons (head xs) (take (1- n) (tail xs))))))
+   #+end_src
+
+   Analog dazu koennen wir auch eine Funktion definieren, die die
+   ersten n Elemente einer Liste verwirft und den "Rest" zurueck gibt.
+
+   #+caption: =<<definition-drop>>=
+   #+name: definition-drop
+   #+begin_src scheme
+     (define (drop n xs)
+       (cond ((= 0 n) xs)
+             ((list-empty? xs)
+              (error "-- DROP: cannot drop another element from the empty list"))
+             (else (drop (1- n) (tail xs)))))
+   #+end_src
 
 ** Was noch fehlt... Sortieren!
    Wir haben gelernt, wie wir
@@ -758,7 +792,7 @@
      (define (mergesort smaller-or-equal-than xs)
        (define (merge as bs)
          (cond ((list-empty? as) bs)
-               ((list-empty? as) bs)
+               ((list-empty? bs) as)
                (else (let
                          ((a (head as))
                           (b (head bs)))
@@ -771,8 +805,12 @@
            ((len (length xs))
             (first-half (take (quotient len 2) xs))
             (second-half (drop (quotient len 2) xs)))
-         (merge (mergesort smaller-or-equal-than first-half)
-                (mergesort smaller-or-equal-than second-half))))
+         (if (<= (length xs) 1)
+             xs
+             (merge (mergesort smaller-or-equal-than
+                               first-half)
+                    (mergesort smaller-or-equal-than
+                               second-half)))))
    #+end_src
    
    Der Vollstaendigkeit halber, hier noch einmal die Definition von
@@ -829,6 +867,8 @@
      <<definition-foldr>>
      <<definition-filter>>
      <<definition-iter-list>>
+     <<definition-take>>
+     <<definition-drop>>
      ;; We have to define concat3 before the sorting algorithms because we
      ;; use these in their definition.
      <<definition-concat>>
