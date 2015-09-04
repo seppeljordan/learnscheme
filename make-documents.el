@@ -10,3 +10,7 @@
 (defun make-pdf ()
   ;; create nicely formatted pdf using latex
   (org-latex-export-to-pdf))
+
+(defun make-html ()
+  ;; create a nicely formatted html
+  (org-html-export-to-html))

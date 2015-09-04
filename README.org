@@ -922,6 +922,342 @@
   andere dauert viel laenger.  Zur Erinnerung: Die =append=-Funktion
   muss bis ans Ende der Liste iterieren, wenn es Element angehaengt
   werden soll.
+  
+* Data directed programming
+  Stellen wir uns vor, dass wir eine Bibliothek schreiben wollen, die
+  ein einheitliches Interface fuer den Umgang mit Baeumen, Listen und
+  Doppellisten ermoeglichen soll.  Wir koennen zum Beispiel fuer alle
+  drei Datentypen =map= und =foldl= definieren.  Falls wir es
+  schaffen, eine einzige =foldl= Funktion zu schreiben, bekommen wir
+  automatisch eine =length=-Funktion "for free".  Um dies zu
+  bewerkstelligen, muessen wir irgendwie entscheiden koennen, mit
+  welchem Datentyp wir es zu tun haben.  Dazu nutzen "type tags".
+
+  #+caption: =<<definition-type-tags>>=
+  #+name: definition-type-tags
+  #+begin_src scheme
+    (define (attach-tag type-tag value)
+      (cons type-tag value))
+
+    (define (get-tagged-type val)
+      (cond ((pair? val) (car val))
+            (else (error "GET-TAGGED-TYPE: not a tagged value" val))))
+
+    (define (get-tagged-value val)
+      (cond ((pair? val) (cdr val))
+            (else (error "GET-TAGGED-VALUE: not a tagged value" val))))
+  #+end_src
+
+  Jetzt muessen wir neue Konstruktoren fuer unsere Datentypen
+  definieren, die unsere type tags benutzen.
+
+  #+caption: =<<definition-tagged-list>>=
+  #+name: definition-tagged-list
+  #+begin_src scheme
+    (define (get-list-internal xs)
+      (if (eq? (get-tagged-type xs) 'list)
+          (get-tagged-value xs)
+          (error "GET-LIST-INTERNAL: value is not a list" xs)))
+
+    (define (tail xs)
+      (cdr (get-list-internal xs)))
+
+    (define (head xs)
+      (car (get-list-internal xs)))
+
+    (define empty-list
+      (attach-tag 'list #nil))
+
+    (define (empty? l)
+      (null? (get-list-internal l)))
+
+    (define (prepend x xs)
+      (attach-tag 'list
+                  (cons x
+                        xs)))
+
+    (define (init xs)
+      (cond ((empty? xs) (error "INIT: list is empty" xs))
+            ((empty? (tail xs)) empty-list)
+            (else (prepend (head xs)
+                           (init (tail xs))))))
+
+    (define (last xs)
+      (cond ((empty? xs) (error "LAST: list is empty" xs))
+            ((empty? (tail xs)) (head xs))
+            (else (last (tail xs)))))
+
+    (define (reverse xs)
+      (define (iter accu rest)
+        (cond ((empty? rest) accu)
+              (else (iter (prepend (head rest) accu)
+                          (tail rest)))))
+      (iter empty-list xs))
+  #+end_src
+
+  #+caption: =<<definition-tagged-tree>>=
+  #+name: definition-tagged-tree
+  #+begin_src scheme
+    (define leaf
+      (attach-tag 'tree 'leaf))
+
+    (define (branch value left right)
+      (attach-tag 'tree
+                  (list value left right)))
+
+    (define (get-tree-internal t)
+      (if (eq? (get-tagged-type t) 'tree)
+          (get-tagged-value t)
+          (error "GET-LEAF-INTERNAL: value is not a tree" t)))
+
+    (define (leaf? t)
+      (eq? t leaf))
+
+    (define (branch? t)
+      (not (leaf? t)))
+
+    (define (left t)
+      (if (branch? t)
+          (cadr (get-tree-internal t))
+          (error "LEFT: tree is a leaf" t)))
+
+    (define (right t)
+      (if (branch? t)
+          (caddr (get-tree-internal t))
+          (error "RIGHT: tree is a leaf" t)))
+
+    (define (branch-value t)
+      (if (branch? t)
+          (car (get-tree-internal t))
+          (error "BRANCH-VALUE: tree is a leaf" t)))
+  #+end_src
+
+  #+caption: =<<definition-tagged-double-list>>=
+  #+name: definition-tagged-double-list
+  #+begin_src scheme
+    (define empty-dlist
+      (attach-tag 'dlist
+                  (list empty-list empty-list)))
+
+    (define (get-dlist-internal dl)
+      (if (eq? (get-tagged-type dl) 'dlist)
+          (get-tagged-value dl)
+          (error "GET-DLIST-INTERNAL: value is not a double list" dl)))
+
+    (define (dprepend val dl)
+      (let* ((intern (get-dlist-internal dl))
+             (front (car intern))
+             (back (cadr intern)))
+        (attach-tag 'dlist
+                      (list (prepend val front)
+                            back))))
+
+    (define (dappend dl val)
+      (let* ((intern (get-dlist-internal dl))
+             (front (car intern))
+             (back (cadr intern)))
+        (attach-tag 'dlist
+                      (list front
+                            (prepend val back)))))
+
+    (define (dtail dl)
+      (let* ((intern (get-dlist-internal dl))
+             (front (car intern))
+             (back (cadr intern)))
+        (cond ((not (empty? front)) (attach-tag 'dlist
+                                                (cons (tail front)
+                                                      back)))
+              (else (attach-tag 'dlist
+                                (cons (tail (reverse back))
+                                      empty-list))))))
+
+    (define (dinit dl)
+      (let* ((intern (get-dlist-internal dl))
+             (front (car intern))
+             (back (cadr intern)))
+        (cond ((not (empty? back)) (attach-tag 'dlist
+                                               (cons front
+                                                     (tail back))))
+              (else (attach-tag 'dlist
+                                (cons empty-list
+                                      (tail (reverse front))))))))
+
+    (define (dhead dl)
+      (let* ((intern (get-dlist-internal dl))
+             (front (car intern))
+             (back (cadr intern)))
+        (cond ((not (empty? front)) (head front))
+              (else (last back)))))
+
+    (define (dlast dl)
+      (let* ((intern (get-dlist-internal dl))
+             (front (car intern))
+             (back (cadr intern)))
+        (cond ((not (empty? back)) (head back))
+              (else (last front)))))
+  #+end_src
+
+  Nun koennen wir eine entsprechende =map=-Funktion definieren.
+  
+  #+begin_src scheme :noweb no-export :tangle examples/map-03.scm
+    <<definition-type-tags>>
+    <<definition-tagged-list>>
+    <<definition-tagged-tree>>
+    <<definition-tagged-double-list>>
+
+    (define (map fun container)
+      (define (lmap fun l)
+        (if (empty? l)
+            empty-list
+            (prepend (fun (head l))
+                     (lmap fun (tail l)))))
+      (define (tmap fun t)
+        (if (leaf? t)
+            leaf
+            (branch (fun (branch-value t))
+                    (tmap fun (left t))
+                    (tmap fun (right t)))))
+      (define (dmap fun dl)
+        (let* ((intern (get-dlist-internal dl))
+               (front (car intern))
+               (back (cadr intern)))
+          (attach-tag 'dlist
+                      (cons (lmap fun front)
+                            (lmap fun back)))))
+      (cond ((eq? (get-tagged-type container) 'list) (lmap fun container))
+            ((eq? (get-tagged-type container) 'tree) (tmap fun container))
+            ((eq? (get-tagged-type container) 'dlist) (dmap fun container))
+            (else (error "MAP: unknown type" container))))
+  #+end_src
+
+  Diese Definition ermoeglicht nun ein einheitliches "Interface" fuer
+  alle Datentypen, die die =map=-Operation unterstuetzen.  Ein
+  entscheidender Nachteil ist dabei jedoch, dass wir jedesmal, wenn
+  wir einen neuen Datentypen hinzufuegen wollen, die =map=-Funktion
+  selbst editieren muessen.  Das fuehrt dazu, dass unser kleines Modul
+  nicht gut erweitert werden kann.
+
+* Functor
+  Ein Functor ist eine Abstraktion ueber Daten.  Ein Functor
+  ermoeglicht das Transformieren von Daten innerhalb einer
+  Datenstruktur.  Diese Transformationsfunktion wird haeufig =map=
+  oder =fmap= genannt.
+
+  Wir haben bereits Beispiele fuer Functors gesehen: Listen.  Dabei
+  ist die =map=-Funktion fuer Listen auch die =fmap=-Funktion von
+  Functors.  Ein weiteres Beispiel fuer Functors waere zum Beispiel
+  der Datentyp =maybe=.
+
+** Beispiel: Maybe
+   Manchmal haben wir es mit Berechnungen zutun, die kein Ergebnis
+   liefern.  Ein Beispiel dafuer, waere die Funktion =div=, die 2
+   Zahlen =a= und =b= nimmt und das Ergebnis der Division =a= / =b=
+   zurueck gibt.
+
+   Falls =b= gleich =0= ist, ist diese Operation nicht definiert.  In
+   vielen Programmiersprachen wird dieses Problem durch Exceptions
+   behandelt, andere Sprachen geben im Fehlerfall einfach den
+   =0=-Zeiger zurueck und setzen eine Fehlervariable auf eine
+   speziellen Fehlercode.
+
+   Wir wollen uns einmal anschauen, wie wir eine potentiell
+   ergebnislose Operation ohne diese Spezialwerkzeuge behandeln
+   koennen.  Dazu benoetigen wir eine Art Behaelter, der entweder
+   nichts (=nothing=) oder genau einen Wert (=just VALUE=) enthalten
+   kann.  Wir muessen irgendwie Werte in diesen Behaelter tun koenne
+   und auch wieder extrahieren koennen.  Dazu definieren wir folgende
+   Regeln:
+
+   * =(nothing? nothing) = #t=
+   * =(nothing? (just x)) = #f=
+   * =(just? nothing) = #f=
+   * =(just? (just x)) = #t=
+   * =(maybe x nothing) = x=
+   * =(maybe x (just y)) = y=
+   * =(from-just nothing) = UNDEFINED=
+   * =(from-just (just x)) = x=
+
+   Wir koennen mit diesen Operationen nun die =div=-Funktion
+   definieren:
+
+   #+begin_src scheme
+     (define (div x y)
+       (if (equal? y 0)
+           nothing
+           (just (/ x y))))
+   #+end_src
+
+   Stellen wir uns nun vor, dass wir das Ergebnis weiter verwenden
+   wollen, in dem wir eine Funktion definieren, die eine Zahl das
+   Reziproke einer Zahl findet (d.h. 1/x) und dann 1 hinzu addiert.
+
+   #+begin_src scheme
+     (define (rezi-and-add n)
+       (let ((rezi (div 1 n)))
+         (if (nothing? rezi)
+             nothing
+             (just (+ 1 (from-just rezi))))))
+   #+end_src
+
+   Diese erste Implementation sieht irgendwie umstaendlich aus.  Wir
+   entpacken das Ergebnis der division nur, um es danach wieder zu
+   verpacken, ausserdem muessen wir uns explizit um den Fehlerfall
+   kuemmern.  Was wir brauchen, ist eine Funktion, die einen
+   =maybe=-Wert nimmt und eine Operation darauf anwendet, sofern der
+   Wert nicht leer ist.  Wir nennen diese Funktion =mmap= (MaybeMAP).
+   Diese Funktion soll die folgenden Regeln befolgen:
+
+   * =(mmap f nothing) = nothing=
+   * =(mmap f (just x)) = (just (f x))=
+
+   Mithilfe dieser Funktion koennen wir die =rezi-and-add=-Funktion
+   viel einfacher implementieren:
+
+   #+begin_src scheme
+     (define (rezi-and-add n)
+       (mmap 1+ (div 1 n)))
+   #+end_src
+
+   Diese zweite verbesserte Version hat die selbe Funktionalitaet
+   ohne, dass wir uns explizit um den Fehlerfall kuemmern muessen.
+
+   Implementieren wir nun die interne Repraesentation unseres neuen
+   Datentyps.
+
+   #+caption: =<<definition-maybe>>=
+   #+name: definition-maybe
+   #+begin_src scheme
+     (define (just val)
+       (cons 'just
+             val))
+
+     (define nothing
+       (cons 'nothing #nil))
+
+     (define (just? mval)
+       (equal? (car mval) 'just))
+
+     (define (nothing? mval)
+       (equal? (car mval) 'nothing))
+
+     (define (maybe alt mval)
+       (if (just? mval)
+           (cdr mval)
+           alt))
+
+     (define (from-just mval)
+       (if (just? mval)
+           (cdr mval)
+           (error "FROM-JUST: cannot extract value from nothing" mval)))
+
+     (define (mmap fun mval)
+       (if (just? mval)
+           (just (fun (from-just mval)))
+           nothing))
+   #+end_src
+
+   Wir koennen nun eine kleine Functorbibliothek erstellen.  Ziel ist
+   es, eine =fmap=-Funktion zu schreiben, die sowohl auf Listen, als auch of 
 
 * GNU Free Documentation License
 
