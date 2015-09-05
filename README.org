@@ -38,7 +38,7 @@
   auf deinem System installiert ist.
 
 * Ein Beispiel: Wurzel nach Newtonverfahren
-  
+
 
   #+caption: =sqrt-newton.scm=
   #+begin_src scheme :tangle examples/sqrt-newton.scm
@@ -497,7 +497,7 @@
 
    Im folgenden Stueckchen Code benutzen wir =map= um weitere
    Funktionen zu definieren.
-   
+
    #+caption: =examples/map-02.scm=
    #+begin_src scheme :noweb no-export :tangle examples/map-02.scm
      <<definitions-lists>>
@@ -892,7 +892,7 @@
   Das sieht ja erstmal genauso wie die Definition einer Liste aus.  Es
   gibt aber einen kleinen Unterschied zwischen Listen uns Streams:
   Streams berechnen ihr die enthaltenen Werte nur auf Abruf.
-  
+
   #+caption: =examples/strict-map.scm=
   #+begin_src scheme :tangle examples/strict-map.scm :noweb no-export
     <<definitions-lists>>
@@ -922,7 +922,7 @@
   andere dauert viel laenger.  Zur Erinnerung: Die =append=-Funktion
   muss bis ans Ende der Liste iterieren, wenn es Element angehaengt
   werden soll.
-  
+
 * Data directed programming
   Stellen wir uns vor, dass wir eine Bibliothek schreiben wollen, die
   ein einheitliches Interface fuer den Umgang mit Baeumen, Listen und
@@ -933,209 +933,296 @@
   bewerkstelligen, muessen wir irgendwie entscheiden koennen, mit
   welchem Datentyp wir es zu tun haben.  Dazu nutzen "type tags".
 
-  #+caption: =<<definition-type-tags>>=
-  #+name: definition-type-tags
-  #+begin_src scheme
-    (define (attach-tag type-tag value)
-      (cons type-tag value))
+** Tagged data
+   #+caption: =<<definition-type-tags>>=
+   #+name: definition-type-tags
+   #+begin_src scheme
+     (define (attach-tag type-tag value)
+       (cons type-tag value))
 
-    (define (get-tagged-type val)
-      (cond ((pair? val) (car val))
-            (else (error "GET-TAGGED-TYPE: not a tagged value" val))))
+     (define (get-tagged-type val)
+       (cond ((pair? val) (car val))
+             (else (error "GET-TAGGED-TYPE: not a tagged value" val))))
 
-    (define (get-tagged-value val)
-      (cond ((pair? val) (cdr val))
-            (else (error "GET-TAGGED-VALUE: not a tagged value" val))))
-  #+end_src
+     (define (get-tagged-value val)
+       (cond ((pair? val) (cdr val))
+             (else (error "GET-TAGGED-VALUE: not a tagged value" val))))
+   #+end_src
 
-  Jetzt muessen wir neue Konstruktoren fuer unsere Datentypen
-  definieren, die unsere type tags benutzen.
+   Jetzt muessen wir neue Konstruktoren fuer unsere Datentypen
+   definieren, die unsere type tags benutzen.
 
-  #+caption: =<<definition-tagged-list>>=
-  #+name: definition-tagged-list
-  #+begin_src scheme
-    (define (get-list-internal xs)
-      (if (eq? (get-tagged-type xs) 'list)
-          (get-tagged-value xs)
-          (error "GET-LIST-INTERNAL: value is not a list" xs)))
+   #+caption: =<<definition-tagged-list>>=
+   #+name: definition-tagged-list
+   #+begin_src scheme
+     (define (get-list-internal xs)
+       (if (eq? (get-tagged-type xs) 'list)
+           (get-tagged-value xs)
+           (error "GET-LIST-INTERNAL: value is not a list" xs)))
 
-    (define (tail xs)
-      (cdr (get-list-internal xs)))
+     (define (tail xs)
+       (cdr (get-list-internal xs)))
 
-    (define (head xs)
-      (car (get-list-internal xs)))
+     (define (head xs)
+       (car (get-list-internal xs)))
 
-    (define empty-list
-      (attach-tag 'list #nil))
+     (define empty-list
+       (attach-tag 'list #nil))
 
-    (define (empty? l)
-      (null? (get-list-internal l)))
+     (define (empty? l)
+       (null? (get-list-internal l)))
 
-    (define (prepend x xs)
-      (attach-tag 'list
-                  (cons x
-                        xs)))
+     (define (prepend x xs)
+       (attach-tag 'list
+                   (cons x
+                         xs)))
 
-    (define (init xs)
-      (cond ((empty? xs) (error "INIT: list is empty" xs))
-            ((empty? (tail xs)) empty-list)
-            (else (prepend (head xs)
-                           (init (tail xs))))))
+     (define (init xs)
+       (cond ((empty? xs) (error "INIT: list is empty" xs))
+             ((empty? (tail xs)) empty-list)
+             (else (prepend (head xs)
+                            (init (tail xs))))))
 
-    (define (last xs)
-      (cond ((empty? xs) (error "LAST: list is empty" xs))
-            ((empty? (tail xs)) (head xs))
-            (else (last (tail xs)))))
+     (define (last xs)
+       (cond ((empty? xs) (error "LAST: list is empty" xs))
+             ((empty? (tail xs)) (head xs))
+             (else (last (tail xs)))))
 
-    (define (reverse xs)
-      (define (iter accu rest)
-        (cond ((empty? rest) accu)
-              (else (iter (prepend (head rest) accu)
-                          (tail rest)))))
-      (iter empty-list xs))
-  #+end_src
+     (define (reverse xs)
+       (define (iter accu rest)
+         (cond ((empty? rest) accu)
+               (else (iter (prepend (head rest) accu)
+                           (tail rest)))))
+       (iter empty-list xs))
 
-  #+caption: =<<definition-tagged-tree>>=
-  #+name: definition-tagged-tree
-  #+begin_src scheme
-    (define leaf
-      (attach-tag 'tree 'leaf))
+     (define (tagged-list . xs)
+       (define (iter ls)
+         (cond ((null? ls) empty-list)
+               (else (prepend (car ls) (iter (cdr ls))))))
+       (iter xs))
+   #+end_src
 
-    (define (branch value left right)
-      (attach-tag 'tree
-                  (list value left right)))
+   #+caption: =<<definition-tagged-tree>>=
+   #+name: definition-tagged-tree
+   #+begin_src scheme
+     (define leaf
+       (attach-tag 'tree 'leaf))
 
-    (define (get-tree-internal t)
-      (if (eq? (get-tagged-type t) 'tree)
-          (get-tagged-value t)
-          (error "GET-LEAF-INTERNAL: value is not a tree" t)))
+     (define (branch value left right)
+       (attach-tag 'tree
+                   (list value left right)))
 
-    (define (leaf? t)
-      (eq? t leaf))
+     (define (get-tree-internal t)
+       (if (eq? (get-tagged-type t) 'tree)
+           (get-tagged-value t)
+           (error "GET-LEAF-INTERNAL: value is not a tree" t)))
 
-    (define (branch? t)
-      (not (leaf? t)))
+     (define (leaf? t)
+       (eq? t leaf))
 
-    (define (left t)
-      (if (branch? t)
-          (cadr (get-tree-internal t))
-          (error "LEFT: tree is a leaf" t)))
+     (define (branch? t)
+       (not (leaf? t)))
 
-    (define (right t)
-      (if (branch? t)
-          (caddr (get-tree-internal t))
-          (error "RIGHT: tree is a leaf" t)))
+     (define (left t)
+       (if (branch? t)
+           (cadr (get-tree-internal t))
+           (error "LEFT: tree is a leaf" t)))
 
-    (define (branch-value t)
-      (if (branch? t)
-          (car (get-tree-internal t))
-          (error "BRANCH-VALUE: tree is a leaf" t)))
-  #+end_src
+     (define (right t)
+       (if (branch? t)
+           (caddr (get-tree-internal t))
+           (error "RIGHT: tree is a leaf" t)))
 
-  #+caption: =<<definition-tagged-double-list>>=
-  #+name: definition-tagged-double-list
-  #+begin_src scheme
-    (define empty-dlist
-      (attach-tag 'dlist
-                  (list empty-list empty-list)))
+     (define (branch-value t)
+       (if (branch? t)
+           (car (get-tree-internal t))
+           (error "BRANCH-VALUE: tree is a leaf" t)))
 
-    (define (get-dlist-internal dl)
-      (if (eq? (get-tagged-type dl) 'dlist)
-          (get-tagged-value dl)
-          (error "GET-DLIST-INTERNAL: value is not a double list" dl)))
+     (define (tree-add-elem smaller-or-equal t x)
+       (if (leaf? t)
+           (branch x leaf leaf)
+           (if (smaller-or-equal x (branch-value t))
+               (branch (branch-value t)
+                       (tree-add-elem smaller-or-equal
+                                      (left t)
+                                      x)
+                       (right t))
+               (branch (branch-value t)
+                       (left t)
+                       (tree-add-elem smaller-or-equal
+                                      (right t)
+                                      x)))))
 
-    (define (dprepend val dl)
-      (let* ((intern (get-dlist-internal dl))
-             (front (car intern))
-             (back (cadr intern)))
-        (attach-tag 'dlist
-                      (list (prepend val front)
-                            back))))
+     (define (tree-from-list smaller-or-equal xs)
+       (define (iter accu rest)
+         (if (empty? rest)
+             accu
+             (iter (tree-add-elem smaller-or-equal accu (head rest))
+                   (tail rest))))
+       (iter leaf xs))
+   #+end_src
 
-    (define (dappend dl val)
-      (let* ((intern (get-dlist-internal dl))
-             (front (car intern))
-             (back (cadr intern)))
-        (attach-tag 'dlist
-                      (list front
-                            (prepend val back)))))
+   #+caption: =<<definition-tagged-double-list>>=
+   #+name: definition-tagged-double-list
+   #+begin_src scheme
+     (define empty-dlist
+       (attach-tag 'dlist
+                   (list empty-list empty-list)))
 
-    (define (dtail dl)
-      (let* ((intern (get-dlist-internal dl))
-             (front (car intern))
-             (back (cadr intern)))
-        (cond ((not (empty? front)) (attach-tag 'dlist
-                                                (cons (tail front)
-                                                      back)))
-              (else (attach-tag 'dlist
-                                (cons (tail (reverse back))
-                                      empty-list))))))
+     (define (get-dlist-internal dl)
+       (if (eq? (get-tagged-type dl) 'dlist)
+           (get-tagged-value dl)
+           (error "GET-DLIST-INTERNAL: value is not a double list" dl)))
 
-    (define (dinit dl)
-      (let* ((intern (get-dlist-internal dl))
-             (front (car intern))
-             (back (cadr intern)))
-        (cond ((not (empty? back)) (attach-tag 'dlist
-                                               (cons front
-                                                     (tail back))))
-              (else (attach-tag 'dlist
-                                (cons empty-list
-                                      (tail (reverse front))))))))
+     (define (dprepend val dl)
+       (let* ((intern (get-dlist-internal dl))
+              (front (car intern))
+              (back (cadr intern)))
+         (attach-tag 'dlist
+                       (list (prepend val front)
+                             back))))
 
-    (define (dhead dl)
-      (let* ((intern (get-dlist-internal dl))
-             (front (car intern))
-             (back (cadr intern)))
-        (cond ((not (empty? front)) (head front))
-              (else (last back)))))
+     (define (dappend dl val)
+       (let* ((intern (get-dlist-internal dl))
+              (front (car intern))
+              (back (cadr intern)))
+         (attach-tag 'dlist
+                       (list front
+                             (prepend val back)))))
 
-    (define (dlast dl)
-      (let* ((intern (get-dlist-internal dl))
-             (front (car intern))
-             (back (cadr intern)))
-        (cond ((not (empty? back)) (head back))
-              (else (last front)))))
-  #+end_src
+     (define (dtail dl)
+       (let* ((intern (get-dlist-internal dl))
+              (front (car intern))
+              (back (cadr intern)))
+         (cond ((not (empty? front)) (attach-tag 'dlist
+                                                 (cons (tail front)
+                                                       back)))
+               (else (attach-tag 'dlist
+                                 (cons (tail (reverse back))
+                                       empty-list))))))
 
-  Nun koennen wir eine entsprechende =map=-Funktion definieren.
-  
-  #+begin_src scheme :noweb no-export :tangle examples/map-03.scm
-    <<definition-type-tags>>
-    <<definition-tagged-list>>
-    <<definition-tagged-tree>>
-    <<definition-tagged-double-list>>
+     (define (dinit dl)
+       (let* ((intern (get-dlist-internal dl))
+              (front (car intern))
+              (back (cadr intern)))
+         (cond ((not (empty? back)) (attach-tag 'dlist
+                                                (cons front
+                                                      (tail back))))
+               (else (attach-tag 'dlist
+                                 (cons empty-list
+                                       (tail (reverse front))))))))
 
-    (define (map fun container)
-      (define (lmap fun l)
-        (if (empty? l)
-            empty-list
-            (prepend (fun (head l))
-                     (lmap fun (tail l)))))
-      (define (tmap fun t)
-        (if (leaf? t)
-            leaf
-            (branch (fun (branch-value t))
-                    (tmap fun (left t))
-                    (tmap fun (right t)))))
-      (define (dmap fun dl)
-        (let* ((intern (get-dlist-internal dl))
-               (front (car intern))
-               (back (cadr intern)))
-          (attach-tag 'dlist
-                      (cons (lmap fun front)
-                            (lmap fun back)))))
-      (cond ((eq? (get-tagged-type container) 'list) (lmap fun container))
-            ((eq? (get-tagged-type container) 'tree) (tmap fun container))
-            ((eq? (get-tagged-type container) 'dlist) (dmap fun container))
-            (else (error "MAP: unknown type" container))))
-  #+end_src
+     (define (dhead dl)
+       (let* ((intern (get-dlist-internal dl))
+              (front (car intern))
+              (back (cadr intern)))
+         (cond ((not (empty? front)) (head front))
+               (else (last back)))))
 
-  Diese Definition ermoeglicht nun ein einheitliches "Interface" fuer
-  alle Datentypen, die die =map=-Operation unterstuetzen.  Ein
-  entscheidender Nachteil ist dabei jedoch, dass wir jedesmal, wenn
-  wir einen neuen Datentypen hinzufuegen wollen, die =map=-Funktion
-  selbst editieren muessen.  Das fuehrt dazu, dass unser kleines Modul
-  nicht gut erweitert werden kann.
+     (define (dlast dl)
+       (let* ((intern (get-dlist-internal dl))
+              (front (car intern))
+              (back (cadr intern)))
+         (cond ((not (empty? back)) (head back))
+               (else (last front)))))
+   #+end_src
+
+   Nun koennen wir eine entsprechende =map=-Funktion definieren.
+
+   #+begin_src scheme :noweb no-export :tangle examples/map-03.scm
+     <<definition-type-tags>>
+     <<definition-tagged-list>>
+     <<definition-tagged-tree>>
+     <<definition-tagged-double-list>>
+
+     (define (map fun container)
+       (define (lmap fun l)
+         (if (empty? l)
+             empty-list
+             (prepend (fun (head l))
+                      (lmap fun (tail l)))))
+       (define (tmap fun t)
+         (if (leaf? t)
+             leaf
+             (branch (fun (branch-value t))
+                     (tmap fun (left t))
+                     (tmap fun (right t)))))
+       (define (dmap fun dl)
+         (let* ((intern (get-dlist-internal dl))
+                (front (car intern))
+                (back (cadr intern)))
+           (attach-tag 'dlist
+                       (cons (lmap fun front)
+                             (lmap fun back)))))
+       (cond ((eq? (get-tagged-type container) 'list) (lmap fun container))
+             ((eq? (get-tagged-type container) 'tree) (tmap fun container))
+             ((eq? (get-tagged-type container) 'dlist) (dmap fun container))
+             (else (error "MAP: unknown type" container))))
+   #+end_src
+
+   Diese Definition ermoeglicht nun ein einheitliches "Interface" fuer
+   alle Datentypen, die die =map=-Operation unterstuetzen.  Ein
+   entscheidender Nachteil ist dabei jedoch, dass wir jedesmal, wenn
+   wir einen neuen Datentypen hinzufuegen wollen, die =map=-Funktion
+   selbst editieren muessen.  Das fuehrt dazu, dass unser kleines Modul
+   nicht gut erweitert werden kann.
+
+
+** Type lookup tables
+   Es modularerer Ansatz fuer "ueberladene Funktionen" ist das
+   Benutzen einer Tabelle, in der hinterlegt ist, welche Funktion fuer
+   welchen Typen benutzt werden soll.  Wir koennen uns eine Tabelle
+   folgendermassen vorstellen:
+
+   | Operation | list     | tree     | dlist    |
+   |-----------+----------+----------+----------|
+   | map       | =lmap=   | =tmap=   | =dmap=   |
+   | foldl     | =lfoldl= | =tfoldl= | =dfoldl= |
+
+   Wenn ein neuer Datentype geschrieben wird, der =map= unterstuetzt,
+   muss er einfach nur der Tabelle hinzugefuegt werden.
+
+   #+caption: =examples/map-04.scm=
+   #+begin_src scheme :tangle examples/map-04.scm :noweb no-export
+     <<definition-type-tags>>
+     <<definition-tagged-list>>
+     <<definition-tagged-tree>>
+     <<definition-tagged-double-list>>
+
+     (define map-lookup-table (make-hash-table))
+
+     (define (map fun container)
+       (let ((op (hashq-ref map-lookup-table
+                            (get-tagged-type container))))
+         (if op
+             (op fun container)
+             (error "MAP: not defined for this type"
+                    (get-tagged-type container)))))
+
+     (define (mmap fun l)
+       (if (empty? l)
+           empty-list
+           (prepend (fun (head l)) (mmap fun (tail l)))))
+
+     (define (tmap fun t)
+       (if (leaf? t)
+           leaf
+           (branch (fun (branch-value t))
+                   (tmap fun (left t))
+                   (tmap fun (right t)))))
+
+     (define (dmap fun dl)
+       (let* ((intern (get-dlist-internal dl))
+              (front (car intern))
+              (back (cadr intern)))
+         (attach-tag 'dlist
+                     (list (map fun front)
+                           (map fun back)))))
+
+     (hashq-set! map-lookup-table 'list mmap)
+     (hashq-set! map-lookup-table 'dlist dmap)
+     (hashq-set! map-lookup-table 'tree tmap)
+   #+end_src
 
 * Functor
   Ein Functor ist eine Abstraktion ueber Daten.  Ein Functor
@@ -1257,7 +1344,7 @@
    #+end_src
 
    Wir koennen nun eine kleine Functorbibliothek erstellen.  Ziel ist
-   es, eine =fmap=-Funktion zu schreiben, die sowohl auf Listen, als auch of 
+   es, eine =fmap=-Funktion zu schreiben, die sowohl auf Listen, als auch of
 
 * GNU Free Documentation License
 
