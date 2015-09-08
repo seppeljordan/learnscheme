@@ -11,6 +11,17 @@
   the license is included in the section entitled "GNU Free
   Documentation License".
 
+* Anleitung fuer dieses Dokument
+  Dieses Dokument enthaelt sehr viel Schemecode.  Du kannst den Code
+  extrahieren, sofern du GNU Make und Emacs auf deinem System
+  installiert hast.  Fuehre einfach den Befehl
+  #+begin_src sh
+    make all
+  #+end_src
+  im Verzeichnis aus, in dem die Datei =lessons.org= liegt.  Eine
+  pdf-Version dieses Dokuments wird ebenfalls erzeugt, sofern =latex=
+  auf deinem System installiert ist.
+
 * Einfuehrung
 ** Themen
    * Rekursion
@@ -25,18 +36,6 @@
         sehr gutes Lehrbuch zum Thema
    * [[https://www.gnu.org/software/guile/][Guile]] :: Wir benutzen Guile als Schemeinterpreter
    * [[http://orgmode.org/][org-mode]] :: Dieses Dokument ist mit Hilfe von org-mode verfasst.
-
-* Anleitung fuer dieses Dokument
-  Dieses Dokument enthaelt sehr viel Schemecode.  Du kannst den Code
-  extrahieren, sofern du GNU Make und Emacs auf deinem System
-  installiert hast.  Fuehre einfach den Befehl
-  #+begin_src sh
-    make all
-  #+end_src
-  im Verzeichnis aus, in dem die Datei =lessons.org= liegt.  Eine
-  pdf-Version dieses Dokuments wird ebenfalls erzeugt, sofern =latex=
-  auf deinem System installiert ist.
-
 * Ein Beispiel: Wurzel nach Newtonverfahren
 
 
