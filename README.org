@@ -880,6 +880,23 @@
      <<definition-sort>>
    #+end_src
 
+* Baeume
+  Baeume sind genauso wie Listen in erster Linie eine Abstraktion
+  ueber Daten.  Listen abstrahieren Daten als eine Sequence die von
+  vorne nach hinten durchgeblaettert werden kann.  Das soll uns
+  ermoeglichen, ueber Daten als eine Einheit nachdenken zu koennen.
+
+  Listen sind fuer viele Dinge gut, vor allem wenn es um iterative
+  Prozesse geht.  Fuer manche Dinge eignen sich Listen allerdings
+  nicht so gut, wie zum Beispiel das Finden von Daten, welches nur mit
+  einer Zeitkomplexitaet von $O(n)$ realisiert werden kann, selbst
+  wenn die Liste bereits sortiert ist.  Listen sind auch nicht so
+  toll, wenn es um das hinzufuegen neuer Daten geht.  Das hinzufuegen
+  eines Elements zum Beginn einer Liste geht schnell, aber alles
+  andere dauert viel laenger.  Zur Erinnerung: Die =append=-Funktion
+  muss bis ans Ende der Liste iterieren, wenn es Element angehaengt
+  werden soll.
+
 * Streams
   Streams sind (so, wie Listen auch) Abstaktionen ueber Daten.  Wir
   stellen uns Streams als (un-)endlich lange Sammlung von Daten vor,
@@ -906,22 +923,172 @@
     (head (map print-and-mult-2 (list 1 2 3 4)))
   #+end_src
 
-* Baeume
-  Baeume sind genauso wie Listen in erster Linie eine Abstraktion
-  ueber Daten.  Listen abstrahieren Daten als eine Sequence die von
-  vorne nach hinten durchgeblaettert werden kann.  Das soll uns
-  ermoeglichen, ueber Daten als eine Einheit nachdenken zu koennen.
+* Functor
+  Ein Functor ist eine Abstraktion ueber Daten.  Ein Functor
+  ermoeglicht das Transformieren von Daten innerhalb einer
+  Datenstruktur.  Diese Transformationsfunktion wird haeufig =map=
+  oder =fmap= genannt.
 
-  Listen sind fuer viele Dinge gut, vor allem wenn es um iterative
-  Prozesse geht.  Fuer manche Dinge eignen sich Listen allerdings
-  nicht so gut, wie zum Beispiel das Finden von Daten, welches nur mit
-  einer Zeitkomplexitaet von $O(n)$ realisiert werden kann, selbst
-  wenn die Liste bereits sortiert ist.  Listen sind auch nicht so
-  toll, wenn es um das hinzufuegen neuer Daten geht.  Das hinzufuegen
-  eines Elements zum Beginn einer Liste geht schnell, aber alles
-  andere dauert viel laenger.  Zur Erinnerung: Die =append=-Funktion
-  muss bis ans Ende der Liste iterieren, wenn es Element angehaengt
-  werden soll.
+  Diese =fmap=-Funktion muss ein paar Regeln gehorchen, um in die
+  Kategorie Functor zu fallen.
+
+  1. =(fmap id x) = x=
+  2. =(fmap g (fmap f x)) = (fmap (compose g f) x)=
+
+  Die erste Functorregel sagt aus, dass wenn ich =fmap= mit der
+  Indentitaet auf einen Wert anwende, dann soll der Wert selbst dabei
+  herrauskommen.  Die Idenitaet ist die Funktion, die Werte in sich
+  selbst ueberfuert.
+
+  #+begin_src scheme
+    (define (id x) x)
+  #+end_src
+
+  Fuer Listen erwarten wir das intuitiv von der =map=-Funktion:
+
+  #+begin_src scheme
+        (map id (list 1 2 3 4))
+    <-> (list (id 1) (id 2) (id 3) (id 4))
+    <-> (list 1 2 3 4)
+  #+end_src
+
+  Die zweite Functorregel sagt aus, dass es keine Rolle spielen darf,
+  ob wir zweimal =fmap= auf einen Wert anwenden (erst =f=, dann =g=),
+  oder ob wir die beiden Funktionen verketten und dann nur einmal
+  =fmap= anwenden.  Die =compose= Funktion ist folgendermasse definiert.
+
+  #+begin_src scheme
+    (define (compose g f)
+      (lambda (x)
+        (g (f x))))
+  #+end_src
+
+  Noch einmal am Beispiel von Listen:
+
+  #+begin_src scheme
+        (map 2* (map 1+ (list 1 2 3)))
+    <-> (map 2* (list (1+ 1) (1+ 2) (1+ 3)))
+    <-> (list (2* (1+ 1)) (2* (1+ 2)) (2* (1+ 3)))
+    <-> (list ((compose 2* 1+) 1) ((compose 2* 1+) 2) ((compose 2* 1+) 3)
+    <-> (map (compose 2* 1+) (list 1 2 3))
+  #+end_src
+
+  Wir haben bereits Beispiele fuer Functors gesehen: Listen und
+  Baeume.  Dabei ist die =map=-Funktion fuer Listen auch die
+  =fmap=-Funktion von Functors.  Ein weiteres Beispiel fuer Functors
+  ist der Datentyp =maybe=.
+
+** Beispiel: Maybe
+   Manchmal haben wir es mit Berechnungen zutun, die kein Ergebnis
+   liefern.  Ein Beispiel dafuer, waere die Funktion =div=, die 2
+   Zahlen =a= und =b= nimmt und das Ergebnis der Division =a= / =b=
+   zurueck gibt.
+
+   Falls =b= gleich =0= ist, ist diese Operation nicht definiert.  In
+   vielen Programmiersprachen wird dieses Problem durch Exceptions
+   behandelt, andere Sprachen geben im Fehlerfall einfach den
+   =0=-Zeiger zurueck und setzen eine Fehlervariable auf eine
+   speziellen Fehlercode.
+
+   Wir wollen uns einmal anschauen, wie wir eine potentiell
+   ergebnislose Operation ohne diese Spezialwerkzeuge behandeln
+   koennen.  Dazu benoetigen wir eine Art Behaelter, der entweder
+   nichts (=nothing=) oder genau einen Wert (=just VALUE=) enthalten
+   kann.  Wir muessen irgendwie Werte in diesen Behaelter tun koenne
+   und auch wieder extrahieren koennen.  Dazu definieren wir folgende
+   Regeln:
+
+   * =(nothing? nothing) = #t=
+   * =(nothing? (just x)) = #f=
+   * =(just? nothing) = #f=
+   * =(just? (just x)) = #t=
+   * =(maybe x nothing) = x=
+   * =(maybe x (just y)) = y=
+   * =(from-just nothing) = UNDEFINED=
+   * =(from-just (just x)) = x=
+
+   Wir koennen mit diesen Operationen nun die =div=-Funktion
+   definieren:
+
+   #+begin_src scheme
+     (define (div x y)
+       (if (equal? y 0)
+           nothing
+           (just (/ x y))))
+   #+end_src
+
+   Stellen wir uns nun vor, dass wir das Ergebnis weiter verwenden
+   wollen, in dem wir eine Funktion definieren, die eine Zahl das
+   Reziproke einer Zahl findet (d.h. 1/x) und dann 1 hinzu addiert.
+
+   #+begin_src scheme
+     (define (rezi-and-add n)
+       (let ((rezi (div 1 n)))
+         (if (nothing? rezi)
+             nothing
+             (just (+ 1 (from-just rezi))))))
+   #+end_src
+
+   Diese erste Implementation sieht irgendwie umstaendlich aus.  Wir
+   entpacken das Ergebnis der division nur, um es danach wieder zu
+   verpacken, ausserdem muessen wir uns explizit um den Fehlerfall
+   kuemmern.  Was wir brauchen, ist eine Funktion, die einen
+   =maybe=-Wert nimmt und eine Operation darauf anwendet, sofern der
+   Wert nicht leer ist.  Wir nennen diese Funktion =mmap= (MaybeMAP).
+   Diese Funktion soll die folgenden Regeln befolgen:
+
+   * =(mmap f nothing) = nothing=
+   * =(mmap f (just x)) = (just (f x))=
+
+   Mithilfe dieser Funktion koennen wir die =rezi-and-add=-Funktion
+   viel einfacher implementieren:
+
+   #+begin_src scheme
+     (define (rezi-and-add n)
+       (mmap 1+ (div 1 n)))
+   #+end_src
+
+   Diese zweite verbesserte Version hat die selbe Funktionalitaet
+   ohne, dass wir uns explizit um den Fehlerfall kuemmern muessen.
+
+   Implementieren wir nun die interne Repraesentation unseres neuen
+   Datentyps.
+
+   #+caption: =<<definition-maybe>>=
+   #+name: definition-maybe
+   #+begin_src scheme
+     (define (just val)
+       (cons 'just
+             val))
+
+     (define nothing
+       (cons 'nothing #nil))
+
+     (define (just? mval)
+       (equal? (car mval) 'just))
+
+     (define (nothing? mval)
+       (equal? (car mval) 'nothing))
+
+     (define (maybe alt mval)
+       (if (just? mval)
+           (cdr mval)
+           alt))
+
+     (define (from-just mval)
+       (if (just? mval)
+           (cdr mval)
+           (error "FROM-JUST: cannot extract value from nothing" mval)))
+
+     (define (mmap fun mval)
+       (if (just? mval)
+           (just (fun (from-just mval)))
+           nothing))
+   #+end_src
+
+   Wir koennen nun eine kleine Functorbibliothek erstellen.  Ziel ist
+   es, eine =fmap=-Funktion zu schreiben, die auf Listen, Maybewerten,
+   Baeumen und eventuell noch anderen Datenstrukturen operieren kann.
 
 * Data directed programming
   Stellen wir uns vor, dass wir eine Bibliothek schreiben wollen, die
@@ -1167,9 +1334,8 @@
    selbst editieren muessen.  Das fuehrt dazu, dass unser kleines Modul
    nicht gut erweitert werden kann.
 
-
 ** Type lookup tables
-   Es modularerer Ansatz fuer "ueberladene Funktionen" ist das
+   Ein modularerer Ansatz fuer "ueberladene Funktionen" ist das
    Benutzen einer Tabelle, in der hinterlegt ist, welche Funktion fuer
    welchen Typen benutzt werden soll.  Wir koennen uns eine Tabelle
    folgendermassen vorstellen:
@@ -1224,127 +1390,26 @@
      (hashq-set! map-lookup-table 'tree tmap)
    #+end_src
 
-* Functor
-  Ein Functor ist eine Abstraktion ueber Daten.  Ein Functor
-  ermoeglicht das Transformieren von Daten innerhalb einer
-  Datenstruktur.  Diese Transformationsfunktion wird haeufig =map=
-  oder =fmap= genannt.
+** Veraenderliche Daten
+   Im obigen Programmbeispiel wird der Befehl =hashq-set!= verwendet.
+   Dieser Befehl nimmt eine Hashmap entgegen und nimmt ein Update vor.
+   Hier sollten wir ein wenig stutzig werden, da bisher einmal
+   erzeugte Daten nicht mehr veraendert werden konnten, mit anderen
+   Worten: =hashq-set!= ist eine Zuweisungsanweisung.
 
-  Wir haben bereits Beispiele fuer Functors gesehen: Listen.  Dabei
-  ist die =map=-Funktion fuer Listen auch die =fmap=-Funktion von
-  Functors.  Ein weiteres Beispiel fuer Functors waere zum Beispiel
-  der Datentyp =maybe=.
+   Wir sollten uns darueber im Klaren sein, sein, dass wir sehr
+   vorsichtig sein muessen, wenn wir veraenderliche Daten haben, da
+   viele nette Eigenschaften funktionaler Programmierung verloren
+   gehen, wenn wir Zuweisungen erlauben.  Darunter faellt unter
+   anderem, dass wir nicht mehr davon ausgehen koennen, dass eine
+   Funktion, aufgerufen mit bestimmten Argumenten, immer das selbe
+   Ergebnis produziert, egal wo sie im Programm aufgerufen wird.
 
-** Beispiel: Maybe
-   Manchmal haben wir es mit Berechnungen zutun, die kein Ergebnis
-   liefern.  Ein Beispiel dafuer, waere die Funktion =div=, die 2
-   Zahlen =a= und =b= nimmt und das Ergebnis der Division =a= / =b=
-   zurueck gibt.
-
-   Falls =b= gleich =0= ist, ist diese Operation nicht definiert.  In
-   vielen Programmiersprachen wird dieses Problem durch Exceptions
-   behandelt, andere Sprachen geben im Fehlerfall einfach den
-   =0=-Zeiger zurueck und setzen eine Fehlervariable auf eine
-   speziellen Fehlercode.
-
-   Wir wollen uns einmal anschauen, wie wir eine potentiell
-   ergebnislose Operation ohne diese Spezialwerkzeuge behandeln
-   koennen.  Dazu benoetigen wir eine Art Behaelter, der entweder
-   nichts (=nothing=) oder genau einen Wert (=just VALUE=) enthalten
-   kann.  Wir muessen irgendwie Werte in diesen Behaelter tun koenne
-   und auch wieder extrahieren koennen.  Dazu definieren wir folgende
-   Regeln:
-
-   * =(nothing? nothing) = #t=
-   * =(nothing? (just x)) = #f=
-   * =(just? nothing) = #f=
-   * =(just? (just x)) = #t=
-   * =(maybe x nothing) = x=
-   * =(maybe x (just y)) = y=
-   * =(from-just nothing) = UNDEFINED=
-   * =(from-just (just x)) = x=
-
-   Wir koennen mit diesen Operationen nun die =div=-Funktion
-   definieren:
-
-   #+begin_src scheme
-     (define (div x y)
-       (if (equal? y 0)
-           nothing
-           (just (/ x y))))
-   #+end_src
-
-   Stellen wir uns nun vor, dass wir das Ergebnis weiter verwenden
-   wollen, in dem wir eine Funktion definieren, die eine Zahl das
-   Reziproke einer Zahl findet (d.h. 1/x) und dann 1 hinzu addiert.
-
-   #+begin_src scheme
-     (define (rezi-and-add n)
-       (let ((rezi (div 1 n)))
-         (if (nothing? rezi)
-             nothing
-             (just (+ 1 (from-just rezi))))))
-   #+end_src
-
-   Diese erste Implementation sieht irgendwie umstaendlich aus.  Wir
-   entpacken das Ergebnis der division nur, um es danach wieder zu
-   verpacken, ausserdem muessen wir uns explizit um den Fehlerfall
-   kuemmern.  Was wir brauchen, ist eine Funktion, die einen
-   =maybe=-Wert nimmt und eine Operation darauf anwendet, sofern der
-   Wert nicht leer ist.  Wir nennen diese Funktion =mmap= (MaybeMAP).
-   Diese Funktion soll die folgenden Regeln befolgen:
-
-   * =(mmap f nothing) = nothing=
-   * =(mmap f (just x)) = (just (f x))=
-
-   Mithilfe dieser Funktion koennen wir die =rezi-and-add=-Funktion
-   viel einfacher implementieren:
-
-   #+begin_src scheme
-     (define (rezi-and-add n)
-       (mmap 1+ (div 1 n)))
-   #+end_src
-
-   Diese zweite verbesserte Version hat die selbe Funktionalitaet
-   ohne, dass wir uns explizit um den Fehlerfall kuemmern muessen.
-
-   Implementieren wir nun die interne Repraesentation unseres neuen
-   Datentyps.
-
-   #+caption: =<<definition-maybe>>=
-   #+name: definition-maybe
-   #+begin_src scheme
-     (define (just val)
-       (cons 'just
-             val))
-
-     (define nothing
-       (cons 'nothing #nil))
-
-     (define (just? mval)
-       (equal? (car mval) 'just))
-
-     (define (nothing? mval)
-       (equal? (car mval) 'nothing))
-
-     (define (maybe alt mval)
-       (if (just? mval)
-           (cdr mval)
-           alt))
-
-     (define (from-just mval)
-       (if (just? mval)
-           (cdr mval)
-           (error "FROM-JUST: cannot extract value from nothing" mval)))
-
-     (define (mmap fun mval)
-       (if (just? mval)
-           (just (fun (from-just mval)))
-           nothing))
-   #+end_src
-
-   Wir koennen nun eine kleine Functorbibliothek erstellen.  Ziel ist
-   es, eine =fmap=-Funktion zu schreiben, die sowohl auf Listen, als auch of
+   Im weiteren Verlauf dieses Textes werden wir Zuweisungen nur fuer 2
+   Dingen verwenden: "data directed programming" und "memoization"
+   (das werden wir noch kennenlernen).  Dies wird den imperativen
+   Einfluss auf unsere Programme gering halten, aber trotzdem flexibel
+   genug sein, um spannende Konzepte kennenzulernen.
 
 * GNU Free Documentation License
 
