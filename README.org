@@ -820,7 +820,7 @@
    Der Vollstaendigkeit halber, hier noch einmal die Definition von
    =concat3= sauber notiert.
 
-   #+name: definition-concat.scm
+   #+name: definition-concat
    #+begin_src scheme
      (define (concat l1 l2)
        "Concatenate l1 with l2"
