@@ -23,19 +23,26 @@
   auf deinem System installiert ist.
 
 * Einfuehrung
+  Dieser Text soll dabei Helfen, einen konzeptuellen Zugang zum
+  Schreiben von Computerprogrammen aus einer funktionalen Perspektive
+  zu geben.
+
 ** Themen
    * Rekursion
+   * Datenstrukturen
    * Streams & Lazy evaluation
    * Concurrency
 
 ** Material
-   * [[https://www.gnu.org/software/emacs/][Emacs]] :: Programmiereditor mit gutem LISP-Support
+   * [[https://www.gnu.org/software/emacs/][Emacs]] :: Programmiereditor mit gutem LISP/Scheme-Support
    * [[http://www.vim.org/][Vim]] :: Standard Linuxtexteditor der auf fast allen Systemen
             installiert ist (Vi)
    * [[https://mitpress.mit.edu/sicp/][Structure and Interpretation of Computer Programs]] :: Ein wirklich
-        sehr gutes Lehrbuch zum Thema
+        sehr gutes Lehrbuch zum Thema, das den Author stark
+        beeinflusst hat.
    * [[https://www.gnu.org/software/guile/][Guile]] :: Wir benutzen Guile als Schemeinterpreter
    * [[http://orgmode.org/][org-mode]] :: Dieses Dokument ist mit Hilfe von org-mode verfasst.
+
 * Ein Beispiel: Wurzel nach Newtonverfahren
 
 
@@ -206,7 +213,6 @@
   #+end_src
 
 ** Fibonacci
-
    Die ersten 10 Elemente der Fibonaccireihe.
 
    | fib(n) | 0 | 1 | 1 | 2 | 3 | 5 | 8 | 13 | 21 | 34 |
@@ -218,7 +224,8 @@
      fib(n) = fib(n -1) + fib(n - 2)
    \end{equation}
 
-   Hier ist eine Pseudoimplementation der Fibnoaccireihe:
+   Hier ist eine Pseudoimplementation der Fibnoaccireihe im
+   imperativen Stil:
    #+begin_src
      int a <- 0
      int b <- 1
@@ -232,36 +239,34 @@
    Als Uebungsvorschlag: Du koenntest versuchen, die Fibonaccireihe
    als Rekursion & Iteration zu implementieren (Siehe Fakultaet).
 
-* Wiederholung: Rekursion & Iteration
+   Eine rekursive Beispielimplementation fuer die Fibonaccireihe:
+   #+begin_src scheme
+     (define (fib-rec n)
+       (cond ((< n 1) (error "FIB-REC: index to small"))
+             ((= n 1) 0)
+             ((= n 2) 1)
+             ((> n 2) (+ (fib-rec (- n 1)) (fib-rec (- n 2))))))
+     (fib-rec 10)
+   #+end_src
 
-  Eine rekursive Beispielimplementation fuer die Fibonaccireihe:
-  #+begin_src scheme
-    (define (fib-rec n)
-      (cond ((< n 1) (error "FIB-REC: index to small"))
-            ((= n 1) 0)
-            ((= n 2) 1)
-            ((> n 2) (+ (fib-rec (- n 1)) (fib-rec (- n 2))))))
-    (fib-rec 10)
-  #+end_src
+   #+results:
+   : 34
 
-  #+results:
-  : 34
+   Hier ist eine iterative Beispielimplementation der Fibonaccizahlen.
+   #+begin_src scheme
+     (define (fib-iter n)
+       (define (iter counter n-1 n-2)
+         (if (= counter n)
+             n-1
+             (iter (1+ counter) (+ n-1 n-2) n-1)))
 
-  Hier ist eine iterative Beispielimplementation der Fibonaccizahlen.
-  #+begin_src scheme
-    (define (fib-iter n)
-      (define (iter counter n-1 n-2)
-        (if (= counter n)
-            n-1
-            (iter (1+ counter) (+ n-1 n-2) n-1)))
+       (cond ((= n 1) 0)
+             ((= n 2) 1)
+             (else (iter 2 1 0))))
+   #+end_src
 
-      (cond ((= n 1) 0)
-            ((= n 2) 1)
-            (else (iter 2 1 0))))
-  #+end_src
-
-  #+results:
-  : 34
+   #+results:
+   : 34
 
 * Listen
   Listen bestehen aus Paaren.
@@ -272,7 +277,7 @@
    aus kleineren Bestandteilen zusammen bauen lassen.
 
    Paare sind "Behaelter", die genau 2 Werte speichern koennen.  Es
-   gibt einen "ersten" Wert und einen "zweiten" Wert, eindeutig
+   gibt einen "ersten" Wert und einen "zweiten" Wert, die eindeutig
    Adressierbar sein muessen.
 
    Es folgt eine Beispielinterface fuer das Programmieren mit Paaren:
@@ -862,8 +867,8 @@
    haben, koennen wir zu einer Library zusammenfassen.  Wir nennen sie
    =lists.scm=.
 
+   #+caption: =<<lists.scm>>= (=lib/lists.scm=)
    #+name: lists.scm
-   #+caption: lists.scm
    #+begin_src scheme :tangle lib/lists.scm :noweb no-export
      <<definitions-lists>>
      <<definition-map>>
@@ -895,6 +900,234 @@
   andere dauert viel laenger.  Zur Erinnerung: Die =append=-Funktion
   muss bis ans Ende der Liste iterieren, wenn es Element angehaengt
   werden soll.
+
+** Struktur
+   
+   Baeume sind, so wie Listen, rekursive Datenstrukturen.  Fuer Listen
+   beduetet dass, dass jede Liste entweder leer ist, oder die
+   Verkettung eines Elements mit einer List.  Baeume sind sehr
+   aehnlich definiert: Jeder Baum ist entweder leer oder ein Element
+   verkettet mit zwei Unterbaeumen.  Die Unterbaeume heissen "linker
+   Unterbaum" und "rechter Unterbaum".
+ 
+   #+caption: =<<tree-constructors>>=
+   #+name: tree-constructors
+   #+begin_src scheme
+     ;; Definitions of tree constructors
+     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+      
+     ;; a leaf is just an empty list
+     (define leaf empty-list)
+     (define leaf? null?)
+      
+     ;; a branch is a value and two subtrees
+     (define (branch val left right)
+       (list val left right))
+     (define branch-value car)
+     (define branch-left cadr)
+     (define branch-right caddr)
+   #+end_src
+ 
+   Die Baeume, die wir hier betrachten wollen heissen "binaere
+   Suchbaeume", binaer, weil jeder Branch ("Zweig") zwei Unterbaeume
+   hat und Suchbaum, weil wir die Baeume, die wir benutzen geordnet
+   sein sollen, also zum Suchen und Finden von Werten (Daten)
+   verwendet werden.  Die Ordnung auf unserem Baum koennen wir
+   folgendermassen beschreiben: Fuer jeden Zweig in unserem Baum gilt,
+   dass alle Elemente, die im linken Unterbaum existieren kleiner als
+   das im Zweig gespeicherte Element sind und alle Elemente im rechten
+   Unterbaum sind grosser als das im Zweig gespeicherte Element.  Dies
+   ermoeglicht uns, ad hoc einen Algorithmus zu beschreiben, der
+   beliebige vergleichbare(!!!) Elemente in unserem Baum zu finden.
+
+   #+begin_src scheme
+     <<tree-constructors>>
+
+     (define (lookup-integer tree n)
+       (cond ((leaf? tree) #f)
+             ((= n (branch-value tree)) #t)
+             ((< n (branch-value tree))
+              (lookup-integer (branch-left tree) n))
+             (else
+              (lookup-integer (branch-right tree) n))))
+   #+end_src
+
+   Es ist leicht zusehen, dass der gegebene Algorithmus rekursiv
+   definiert ist.  Wenn wir wissen wollen, ob eine Zahl in einem Leaf
+   ("Blatt") zu finden ist, dann antwortet der Algorithmus mit =#f=,
+   da ein Leaf keine Werte enthaelt.  Sollte die Funktionen einen
+   Branch finden, dann ueberpruefen wir zu erst, ob das gesuchte
+   Element im aktuellen Branch gespeichert ist, sollte das der Fall
+   sein, geben wir =#t= zurueck.  Sollte auch das nicht der Fall sein,
+   wird ueberprueft, ob die gesuchte Zahl kleiner oder groesser ist,
+   als das aktuelle Element (=branch-value=).  Wenn das gesuchte
+   Element nun also kleiner ist, wissen wir, dass es auf Grund der
+   oben definierten Ordnung nur im linken Unterbaum stecken kann.  Im
+   "groesser"-Fall kann es wiederum nur im rechten Unterbaum stecken
+   und wir setzen unsere Suche dort fort.
+
+   Es stellt sich nun die Frage, wie wir einen Baum konstruieren
+   koennen, und es stellt sich heraus, dass die Konstruktion fast
+   genauso wie die Suche ablaeuft.  Wenn wir eine Element $x$ zu einem
+   leeren Baum, also Leaf, hinzufuegen wollen, dass geben wir einen
+   Branch zurueck, dessen =branch-value= gerade $x$ ist und dessen
+   Unterbaeume leere sind.  Sollten wir versuchen das Element zu einem
+   Branch hinzuzufuegen, dann tritt einer der folgenden drei Faelle
+   ein:
+
+   - x = =branch-value= :: Das Element ist bereits im Baum enthalten
+        und wir geben einfach den Baum selbst zurueck.
+   - x < =branch-value= :: Um die Ordnung des Baumes zu bewahren,
+        wissen wir, dass $x$ dem linken Unterbaum hinzugefuegt werden
+        muss.
+   - x < =branch-value= :: Aequivalent zum obigen Fall muessen wir $x$
+        dem rechten Unterbaum hinzufuegen, um die Ordung zu wahren.
+
+   #+begin_src scheme
+     (define (insert-int tree x)
+       (cond ((leaf? tree) (branch x leaf leaf))
+             ((= x (branch-value tree)) tree)
+             ((< x (branch-value tree))
+              (branch (branch-value tree)
+                      (insert-int (branch-left tree) x)
+                      (branch-right tree)))
+             (else
+              (branch (branch-value tree)
+                      (branch-left tree)
+                      (insert-int (branch-right tree) x)))))
+   #+end_src
+
+   Damit haben wir die atomaren Operationen auf unserem Baum
+   definiert.  Die Funktionen die wir definiert haben sind aber auf
+   =integer=-Werte spezialisiert, wir wuerden aber gern Baeume mit
+   beliebigen vergleichbaren Elementen betrachten koennen.  Dafuer
+   brauchen wir eine Moeglichkeit Vergleiche zu kodieren.  Wir waehlen
+   dazu folgende Form:
+   
+   Ein Vergleich ist eine Funktion mit zwei Parametern.  
+
+   1. Wenn diese Funktion $1$ zurueck gibt, ist das erste Argument
+      groesser als das zweite Argument.
+   2. Wenn die Funktion $0$ zurueck gibt, sind beide Argumente
+      gleichwertig.
+   3. Wenn die Funktion $-1$ zurueck gibt, ist das erste Argument
+      groesser als zweite.
+
+   Die folgende Funktion "implementiert" eine Vergleichsfunktion fuer
+
+   #+begin_src scheme
+     (define (comp-int x y)
+       (cond ((< x y) -1)
+             ((> x y) 1)
+             (else 0)))
+   #+end_src
+
+   Mit einer solchen Funktion koennen wir eine =insert=-Funktion
+   definieren, unabhaengig von konkreten Vergleichsoperationen
+   funktioniert.
+
+   #+caption: =<<tree-insert>>=
+   #+name: tree-insert
+   #+begin_src scheme
+     (define (insert comp elem tree)
+       (cond ((leaf? tree) (branch elem leaf leaf))
+             (else
+              (let* ((left (branch-left tree))
+                     (right (branch-right tree))
+                     (val (branch-value tree))
+                     (comp-val (comp elem val)))
+                (cond ((= comp-val 1)
+                       (branch val left (insert comp elem right)))
+                      ((= comp-val -1)
+                       (branch val (insert comp elem left) right))
+                      ((= comp-val 0)
+                       (branch elem left right))
+                      (else (error "insert: supplied comparison funktion is illdefined"
+                                   comp)))))))
+   #+end_src
+
+   Die =lookup=-Funktion ist aequivalent.
+
+   #+caption: =<<tree-lookup>>=
+   #+name: tree-lookup
+   #+begin_src scheme
+     (define (lookup comp elem tree)
+       (cond ((leaf? tree) #f)
+             (else
+              (let* ((val (branch-value tree))
+                     (left (branch-left tree))
+                     (right (branch-right tree))
+                     (comp-val (comp elem val)))
+                (cond ((= comp-val 0) val)
+                      ((= comp-val 1)
+                       (lookup comp elem left))
+                      ((= comp-val -1)
+                       (lookup comp elem right))
+                      (else
+                       (error "lookup: supplied comp function is ill defined "
+                              comp)))))))
+   #+end_src
+
+   Wir koennen nun Werte einem Baum hinzufuegen und ueberpruefen, ob
+   ein Wert im Baum gespeichert ist.  Manchmal wollen wir aber auch
+   einen Wert aus dem Baum loeschen.  Loeschen soll an dieser Stelle
+   konstruktiv verstanden werden.  Wir wollen bestehende Baeume nicht
+   modifizieren (in der Tat wissen wir noch gar nicht wie wir
+   IRGENDEINEN Wert modifizieren koennen), sondern einen neuen Baum
+   erschaffen, in dem alle Werte aus dem alten Baum vorhanden sind,
+   bis auf den zu loeschenden Wert.  Das Loeschen von Werten aus
+   Baeumen ist ein wenig komplizierter als das Loeschen von Werten aus
+   Listen (=filter=), da wir darauf achten muessen, dass die Struktur
+   des Baumes erhalten bleibt.  Die Strategie beim Loeschen ist
+   folgendermassen:
+
+   Wenn wir Wert $x$ aus Baum $t$ loeschen wollen, suchen wir zu erst
+   die Stelle an der $x$ im Baum steht.  Falls $x \not\in t$ geben wir
+   einfach den urspruenglichen Baum zurueck.  Falls $x \in t$,
+   unterscheiden wir drei Faelle:
+
+   - $x$ hat kein Kind :: In diesem Fall ersetzen wir den Branch auf
+        dem $x$ gespeichert ist mit einem Leaf.
+   - $x$ hat ein Kind :: In diesem Fall ersetzen wir $x$ durch sein
+        Kind.
+   - $x$ hat zwei Kinder :: Wir tauschen $x$ mit dem "linkesten" Wert
+        im rechten Unterbaum von $x$, und fuehren diesen Fall damit
+        auf Fall 1 oder 2 zurueck.
+        
+   #+caption: =<<tree-delete>>=
+   #+name: tree-delete
+   #+begin_src scheme
+     (define (delete comp elem tree)
+       ;; delete the leftest node of a tree and return a pair of the
+       ;; deletet value and the new tree
+       (define (delete-leftest t)
+         (let ((left (branch-left t))
+               (right (branch-right t))
+               (val (branch-value t)))
+           (cond ((leaf? (left t))
+                  (cons (val t)
+                        (right t)))
+               (else
+                (let ((pair (delete-leftest left)))
+                  (cons (car pair)
+                        (branch val (cdr pair) right)))))))
+       (cond ((null? tree) leaf) ;; The value is not in the tree
+             (else
+              (let* ((left (branch-left tree))
+                     (val (branch-value tree))
+                     (right (branch-right tree))
+                     (comp-val (comp x val)))
+                (cond ((= 1 comp-val)
+                       (branch val left (delete comp elem right)))
+                      ((= -1 comp-val)
+                       (branch val (delete comp elem left) right))
+                      ((and (leaf? left) (leaf right)) leaf)
+                      ((leaf? right) left)
+                      ((leaf? left) right)
+                      (else
+                       (let ((l (delete-leftest right)))
+                         (branch (car l) left (cdr l)))))))))
+   #+end_src
 
 * Streams
   Streams sind (so, wie Listen auch) Abstaktionen ueber Daten.  Wir
