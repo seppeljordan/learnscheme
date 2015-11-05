@@ -18,7 +18,7 @@
   #+begin_src sh
     make all
   #+end_src
-  im Verzeichnis aus, in dem die Datei =lessons.org= liegt.  Eine
+  im Verzeichnis aus, in dem die Datei =README.org= liegt.  Eine
   pdf-Version dieses Dokuments wird ebenfalls erzeugt, sofern =latex=
   auf deinem System installiert ist.
 
