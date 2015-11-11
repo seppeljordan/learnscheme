@@ -902,24 +902,23 @@
   werden soll.
 
 ** Struktur
-   
    Baeume sind, so wie Listen, rekursive Datenstrukturen.  Fuer Listen
    beduetet dass, dass jede Liste entweder leer ist, oder die
    Verkettung eines Elements mit einer List.  Baeume sind sehr
    aehnlich definiert: Jeder Baum ist entweder leer oder ein Element
    verkettet mit zwei Unterbaeumen.  Die Unterbaeume heissen "linker
    Unterbaum" und "rechter Unterbaum".
- 
+
    #+caption: =<<tree-constructors>>=
    #+name: tree-constructors
    #+begin_src scheme
      ;; Definitions of tree constructors
      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-      
+
      ;; a leaf is just an empty list
      (define leaf empty-list)
      (define leaf? null?)
-      
+
      ;; a branch is a value and two subtrees
      (define (branch val left right)
        (list val left right))
@@ -927,7 +926,7 @@
      (define branch-left cadr)
      (define branch-right caddr)
    #+end_src
- 
+
    Die Baeume, die wir hier betrachten wollen heissen "binaere
    Suchbaeume", binaer, weil jeder Branch ("Zweig") zwei Unterbaeume
    hat und Suchbaum, weil wir die Baeume, die wir benutzen geordnet
@@ -1003,8 +1002,8 @@
    beliebigen vergleichbaren Elementen betrachten koennen.  Dafuer
    brauchen wir eine Moeglichkeit Vergleiche zu kodieren.  Wir waehlen
    dazu folgende Form:
-   
-   Ein Vergleich ist eine Funktion mit zwei Parametern.  
+
+   Ein Vergleich ist eine Funktion mit zwei Parametern.
 
    1. Wenn diese Funktion $1$ zurueck gibt, ist das erste Argument
       groesser als das zweite Argument.
@@ -1093,7 +1092,7 @@
    - $x$ hat zwei Kinder :: Wir tauschen $x$ mit dem "linkesten" Wert
         im rechten Unterbaum von $x$, und fuehren diesen Fall damit
         auf Fall 1 oder 2 zurueck.
-        
+
    #+caption: =<<tree-delete>>=
    #+name: tree-delete
    #+begin_src scheme
@@ -1104,24 +1103,24 @@
          (let ((left (branch-left t))
                (right (branch-right t))
                (val (branch-value t)))
-           (cond ((leaf? (left t))
-                  (cons (val t)
-                        (right t)))
-               (else
-                (let ((pair (delete-leftest left)))
-                  (cons (car pair)
-                        (branch val (cdr pair) right)))))))
+           (cond ((leaf? left)
+                  (cons val
+                        right))
+                 (else
+                  (let ((pair (delete-leftest left)))
+                    (cons (car pair)
+                          (branch val (cdr pair) right)))))))
        (cond ((null? tree) leaf) ;; The value is not in the tree
              (else
               (let* ((left (branch-left tree))
                      (val (branch-value tree))
                      (right (branch-right tree))
-                     (comp-val (comp x val)))
+                     (comp-val (comp elem val)))
                 (cond ((= 1 comp-val)
                        (branch val left (delete comp elem right)))
                       ((= -1 comp-val)
                        (branch val (delete comp elem left) right))
-                      ((and (leaf? left) (leaf right)) leaf)
+                      ((and (leaf? left) (leaf? right)) leaf)
                       ((leaf? right) left)
                       ((leaf? left) right)
                       (else
