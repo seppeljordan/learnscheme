@@ -884,7 +884,7 @@
      <<definition-sort>>
    #+end_src
 
-* Baeume
+* Binaere Suchbaeume
   Baeume sind genauso wie Listen in erster Linie eine Abstraktion
   ueber Daten.  Listen abstrahieren Daten als eine Sequence die von
   vorne nach hinten durchgeblaettert werden kann.  Das soll uns
@@ -1127,6 +1127,30 @@
                        (let ((l (delete-leftest right)))
                          (branch (car l) left (cdr l)))))))))
    #+end_src
+
+* Module
+  Guile/Scheme stellt ein Modulesystem bereit, auf das wir von nun an
+  zurueck greifen wollen.  Module werden mit dem Befehl =use-modules=
+  geladen.  Weitere Infos dazu findet ihr im [[https://www.gnu.org/software/guile/manual/html_node/Using-Modules.html#Using-Modules][Handbuch]] von Guile. Um
+  z.B. die =fold=-Implementation fuer Listen zu benutzen, laden wir
+  das Modul =(srfi srfi-1)=.
+
+  #+begin_src scheme
+    (use-modules (srfi srfi-1))
+
+    (define (sum ls)
+      (fold + 0 ls))
+
+    (display (sum '(1 2 3 4 5)))
+    (newline)
+    ;; 15
+  #+end_src
+
+  Eine [[https://www.gnu.org/software/guile/manual/html_node/Guile-Modules.html#Guile-Modules][Liste der verfuegbaren Standardmodule]] findet ihr auch im
+  Handbuch.
+
+* Pattern matching
+  stub
 
 * Streams
   Streams sind (so, wie Listen auch) Abstaktionen ueber Daten.  Wir

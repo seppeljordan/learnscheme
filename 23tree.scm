@@ -10,8 +10,9 @@
     ;; We have to traverse down the tree to the leaf node where the
     ;; element should be added
     (match t
-      ;; we don't have to care about the case where we hit a "leaf"
-      ;; because insert itself takes already care of this case
+      ;; check the structure of the node we want to change.  we don't
+      ;; have to care about the case where we hit a "leaf" because
+      ;; insert itself takes already care of this case
       (('leaf1 x)
        (let ((comp-val (comp elem x)))
          (cond ((= 0 comp-val)
@@ -62,52 +63,39 @@
              (comp-with-y (comp elem y)))
          (cond ((= 0 comp-with-x)
                 (zip-up (list 'branch2
-                              left
-                              elem
-                              mid
-                              y
-                              right)
+                              left elem mid y right)
                         zipper))
                ((= 0 comp-with-y)
                 (zip-up (list 'branch2
-                              left
-                              x
-                              mid
-                              elem
-                              right)
+                              left x mid elem right)
                         zipper))
                ((= -1 comp-with-x)
                 (down-phase left
                             (cons (list 'zip-2-left
-                                        x
-                                        mid
-                                        y
-                                        right)
+                                        x mid y right)
                                   zipper)))
                ((= 1 comp-with-y)
                 (down-phase right
                             (cons (list 'zip-2-right
-                                        left
-                                        x
-                                        mid
-                                        y)
+                                        left x mid y)
                                   zipper)))
                (else
                 (down-phase mid
                             (cons (list 'zip-2-mid
-                                        left
-                                        x
-                                        y
-                                        right)
+                                        left x y right)
                                   zipper))))))))
   (define (up-phase left x right zipper)
     ;; this function gets called when we already inserted the element
     ;; to the right place, but still need to rearrange the tree.
     (match zipper
+      ;; check if we are already at the top
       (()
+       ;; we are at the top
        (list 'branch1 left x right))
       ((zip zipper ...)
+       ;; we are not at the top
        (match zip
+         ;; check the kind of zip that is next
          (('zip-1-left y rightest)
           (zip-up (list 'branch2 left x right y rightest) zipper))
          (('zip-1-right leftest w)
@@ -138,9 +126,11 @@
     ;; element to insert and just have to zip up the rest of the tree.
     (match zipper
       (()
+       ;; we are already at the top
        tree)
       ((zip zipper ...)
        (match zip
+         ;; check the kind of zip we have
          (('zip-1-left x right)
           (zip-up (list 'branch1 tree x right) zipper))
          (('zip-1-right left x)
@@ -162,7 +152,7 @@
   (cond ((< x y) -1)
         ((> x y) 1)
         (else 0)))
-         
+
 (define (fold-with-depth* depth fun start tree)
   ;; foldl over a tree applying the following function
   ;; (fun current-depth current-val previous),
@@ -202,7 +192,7 @@
                                       start-right
                                       right)))
        result))))
-                    
+
 (define (fold-with-depth fun start tree)
   (fold-with-depth* 1 fun start tree))
 
@@ -217,9 +207,9 @@
   (fold-with-depth (lambda (d x prev) (begin (display-ind (* 2 d) x) prev))
                    #nil
                    t))
-                     
+
 (define (run-on-list list)
-  (fold (lambda (n t) 
+  (fold (lambda (n t)
           (let ((newt (insert int-comp n t)))
             (begin (pp newt)
                    (display "----")
