@@ -1150,7 +1150,45 @@
   Handbuch.
 
 * Pattern matching
-  stub
+  Es kann immer mal wieder vorkommen, dass wir Funktionen
+  schreiben/benutzen, deren Rueckgabewerte oder Argumente
+  umterschiedliche Strukturen haben koennen.  Das einfachste Beispiel
+  an dieser Stelle ist =map= fuer Listen.
+
+  #+begin_src scheme
+    (define (map fun l)
+      (cond ((null? l) l)
+            (else
+             (cons (fun (car l))
+                   (map fun (cdr l))))))
+  #+end_src
+
+  Wir unterscheiden, ob das Argument =l= gerade =#nil= ist oder ein
+  Paar.  Dieses Muster kommt in funktionaler Programmierung relativ
+  haeufig vor.  Scheme bietet eine andere Moeglichkeit dieses Problem
+  anzugehen: Pattern matching.
+
+  #+begin_src scheme
+    (use-modules (ice-9 match))
+
+    (define (map fun l)
+      (match l
+        (()
+         '())
+        ((head tail ...)
+         (cons (fun head)
+               (map fun tail)))))
+  #+end_src
+
+  Diese Implementation von =map= "ueberprueft" die Struktur von =l=.
+  Handelt es sich um die leere Liste, wird diese leere Liste zurueck
+  gegeben.  An sonsten wird die Liste aufgeteilt in =head= und =tail=,
+  wobei die Elemente der Liste an die entsprechenden Namen gebunden
+  werden, =fun= wird auf =head= angewendet und das Ergebnis dann mit
+  dem "gemapten" =tail= "geconst".
+
+  Weitere Infos zum Thema "pattern matching" findest du im [[https://www.gnu.org/software/guile/manual/html_node/Pattern-Matching.html#Pattern-Matching][Handbuch
+  von Guile]].
 
 * Streams
   Streams sind (so, wie Listen auch) Abstaktionen ueber Daten.  Wir
