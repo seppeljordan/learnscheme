@@ -3,7 +3,34 @@
 (use-modules (ice-9 match)) ;; for the use of match
 (use-modules (srfi srfi-1)) ;; to import fold
 
-(define empty-tree '(leaf))
+(define empty-tree (list 'leaf))
+
+(define (lookup comp elem tree)
+  (match tree
+    (('leaf)
+     #f)
+    (('leaf1 a)
+     (if (= 0 (comp elem a))
+         a
+         #f))
+    (('leaf2 a b)
+     (cond ((= 0 (comp elem a))
+            a)
+           ((= 0 (comp elem b))
+            b)
+           (else #f)))
+    (('branch2 left a mid b right)
+     (let ((a-comp (comp x a))
+           (b-comp (comp x b)))
+       (cond ((= -1 a-comp)
+              (lookup comp x left))
+             ((= 1 b-comp)
+              (lookup comp x right))
+             ((= 0 a-comp)
+              a)
+             ((= 0 b-comp)
+              b)
+             (else (lookup comp x mid)))))))
 
 (define (insert comp elem t)
   (define (down-phase t zipper)
@@ -195,6 +222,18 @@
 
 (define (fold-with-depth fun start tree)
   (fold-with-depth* 1 fun start tree))
+
+(define (pretty-show tree show)
+  (fold-with-depth (lambda (depth val accu)
+                     (string-append accu
+                                    "\n"
+                                    (indent depth (show val))))
+                   ""
+                   tree))
+
+(define (indent n str)
+  (string-append (fold string-append "" (make-list n " "))
+                 str))
 
 (define (display-ind n obj)
   (if (<= n 0)
