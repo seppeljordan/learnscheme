@@ -8,6 +8,8 @@
 ;; match
 (use-modules (web uri))
 ;; uri-path, uri-query, split-and-decode-uri-path
+(use-modules (srfi srfi-18))
+;; mutexes
 
 ;; We have to load the 23tree module
 (load "23tree.scm")
@@ -26,30 +28,43 @@
 (define store-number #f)
 (define with-tree #f)
 ;; Now we define the phone book and its accessors.
-(let ((phone-book empty-tree))
-  ;; define a way to store a number in the phone book.
-  (set! store-number
-    (lambda (name number)
-      (set! phone-book (insert comp (list name number) phone-book))))
-  ;; define a way to look up a number for a given name
+(let ((phone-book empty-tree)
+      (lock (make-mutex)))
   (set! lookup-name
     (lambda (name)
-      (lookup comp (list name #f) phone-book)))
-  ;; generic accessor function: specify a function that is applied to
-  ;; the phone book.
+      (begin (mutex-lock! lock)
+             (let ((res (match (lookup comp (list name #f) phone-book)
+                          ((_ number)
+                           number)
+                          (_
+                           #f))))
+               (begin (mutex-unlock!)
+                      res)))))
+  (set! store-number
+    (lambda (name number)
+      (begin (mutex-lock! lock)
+             (set! phone-book (insert comp (list name number) phone-book))
+             (mutex-unlock!))))
   (set! with-tree
     (lambda (fun)
-      (begin (set! phone-book (fun phone-book))
-             phone-book))))
+      (begin (mutex-lock! lock)
+             (let ((new-phone-book (fun phone-book)))
+               (begin (set! phone-book new-phone-book)
+                      (mutex-unlock! lock)
+                      new-phone-book))))))
 
 ;; Split a uri query string into its components and sort the elements
 ;; by their name
 ;;
 ;; "name=a&age=b" -> (("age" "b") ("name" "a"))
 (define (split-query query)
-  (map (lambda (str)
-         (string-split str #\=))
-       (string-split query #\&)))
+  (match query
+    (#f
+     "")
+    (query-str
+     (map (lambda (str)
+            (string-split str #\=))
+          (string-split query-str #\&)))))
 
 ;; get the request path components
 ;; "localhost:80/test/path" -> ("test" "path")
@@ -94,8 +109,7 @@
                (failed
                 "unknown query")))
             (nothing
-             (string-append "unknown request: "
-                            (request-uri-query request))))))
+             "unknown request"))))
 
 ;; Run the server
 (run-server phonebook-handler)
