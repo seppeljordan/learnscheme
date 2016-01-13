@@ -4,6 +4,8 @@
 ;; run-server
 (use-modules (web request))
 ;; request-uri
+(use-modules (web response))
+;; build-response
 (use-modules (ice-9 match))
 ;; match
 (use-modules (web uri))
@@ -38,13 +40,13 @@
                            number)
                           (_
                            #f))))
-               (begin (mutex-unlock!)
+               (begin (mutex-unlock! lock)
                       res)))))
   (set! store-number
     (lambda (name number)
       (begin (mutex-lock! lock)
              (set! phone-book (insert comp (list name number) phone-book))
-             (mutex-unlock!))))
+             (mutex-unlock! lock))))
   (set! with-tree
     (lambda (fun)
       (begin (mutex-lock! lock)
@@ -90,26 +92,34 @@
     (cond ((not looked-up-name)
            (string-append name " is not in the phone book"))
           (else (string-append "number for " name
-                               " is " (cadr looked-up-name))))))
+                               " is " looked-up-name)))))
+
+(define (not-found msg)
+  (values (build-response #:code 404)
+          msg))
+
+(define (reply msg)
+  (values (build-response #:code 200
+                          #:headers '((content-type . (text/plain))))
+          msg))
 
 ;; This is the request handler
 (define (phonebook-handler request request-body)
-  (values '((content-type . (text/plain)))
-          (match (request-path-components request)
-            (("lookup")
-             (match (request-uri-query-components request)
-               ((("name" name))
-                (lookup-handler name))
-               (failed
-                "unknown query")))
-            (("insert")
-             (match (request-uri-query-components request)
-               ((("name" name) ("number" number))
-                (insert-handler name number))
-               (failed
-                "unknown query")))
-            (nothing
-             "unknown request"))))
+  (match (request-path-components request)
+    (("lookup")
+     (match (request-uri-query-components request)
+       ((("name" name))
+        (reply (lookup-handler name)))
+       (failed
+        (not-found "unknown query"))))
+    (("insert")
+     (match (request-uri-query-components request)
+       ((("name" name) ("number" number))
+        (reply (insert-handler name number)))
+       (failed
+        (not-found "unknown query"))))
+    (nothing
+     (not-found "unknown request"))))
 
 ;; Run the server
 (run-server phonebook-handler)
