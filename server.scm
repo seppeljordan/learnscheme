@@ -13,10 +13,14 @@
 (use-modules (srfi srfi-18))
 ;; mutexes
 
-;; We have to load the 23tree module
+;; Because we want to load the phone book in our custom tree data
+;; structure, we have to load the definitions.
 (load "23tree.scm")
 
 ;; This is the comparison for our pairs of names and phone numbers.
+;; Because this used as a way to tell, if two entries belong to the
+;; same person, we don't care for the number.  Otherwise we won't be
+;; able to find a number without knowing it already.
 (define (comp x y)
   (cond ((string<? (car x) (car y)) -1)
         ((string>? (car x) (car y)) 1)
@@ -56,9 +60,9 @@
                       new-phone-book))))))
 
 ;; Split a uri query string into its components and sort the elements
-;; by their name
+;; by their name.
 ;;
-;; "name=a&age=b" -> (("age" "b") ("name" "a"))
+;; (split-query "name=a&age=b") -> (("age" "b") ("name" "a"))
 (define (split-query query)
   (match query
     (#f
@@ -68,13 +72,20 @@
             (string-split str #\=))
           (string-split query-str #\&)))))
 
-;; get the request path components
-;; "localhost:80/test/path" -> ("test" "path")
+;; get the request path components.  The argument to this function has
+;; to be a request object and *not a string*.  The following example
+;; won't work for this reason, but shows how this function works on a
+;; given path.
+
+;; (request-path-components "localhost:80/test/path") -> ("test" "path")
+;;
+;; See the "phonebook-handler" function for a valid example.
 (define (request-path-components request)
   (sort (split-and-decode-uri-path (uri-path (request-uri request)))
         (lambda (x y) (string<? (car x) (car y)))))
 
-;; get the request query components according to 'split-query
+;; This is the composition of request-uri, uri-query and split-query.
+;; See these functions for more explanation.
 (define (request-uri-query-components request)
   (split-query (uri-query (request-uri request))))
 
@@ -94,25 +105,33 @@
           (else (string-append "number for " name
                                " is " looked-up-name)))))
 
+;; Send a 404 message to the client with "msg" in its response body.
 (define (not-found msg)
   (values (build-response #:code 404)
           msg))
 
+;; Send a 200 message to the client with "msg" in its response body.
 (define (reply msg)
   (values (build-response #:code 200
                           #:headers '((content-type . (text/plain))))
           msg))
 
-;; This is the request handler
+;; This is the request handler.  Valid paths are /lookup and /insert.
+;; "localhost:8080/insert?name=gnu&number=42" will save a pair of
+;; ("gnu" . "42") in the "database" and
+;; "localhost:8080/lookup?name=gnu" will look up "42".
 (define (phonebook-handler request request-body)
   (match (request-path-components request)
+    ;; match of the path components
     (("lookup")
+     ;; this will match on "/lookup" and "/lookup/".
      (match (request-uri-query-components request)
        ((("name" name))
         (reply (lookup-handler name)))
        (failed
         (not-found "unknown query"))))
     (("insert")
+     ;; matches "/insert" and "/insert/"
      (match (request-uri-query-components request)
        ((("name" name) ("number" number))
         (reply (insert-handler name number)))
