@@ -19,18 +19,27 @@
            ((= 0 (comp elem b))
             b)
            (else #f)))
+    (('branch1 left a right)
+     (let ((a-comp (comp elem a)))
+       (match a-comp
+         (1
+          (lookup comp elem right))
+         (-1
+          (lookup comp elem left))
+         (0
+          a))))
     (('branch2 left a mid b right)
-     (let ((a-comp (comp x a))
-           (b-comp (comp x b)))
+     (let ((a-comp (comp elem a))
+           (b-comp (comp elem b)))
        (cond ((= -1 a-comp)
-              (lookup comp x left))
+              (lookup comp elem left))
              ((= 1 b-comp)
-              (lookup comp x right))
+              (lookup comp elem right))
              ((= 0 a-comp)
               a)
              ((= 0 b-comp)
               b)
-             (else (lookup comp x mid)))))))
+             (else (lookup comp elem mid)))))))
 
 (define (insert comp elem t)
   (define (down-phase t zipper)

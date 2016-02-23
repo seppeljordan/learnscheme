@@ -17,6 +17,9 @@
 ;; structure, we have to load the definitions.
 (load "23tree.scm")
 
+;; This file stores all the html templates for the server.
+(load "template.scm")
+
 ;; This is the comparison for our pairs of names and phone numbers.
 ;; Because this used as a way to tell, if two entries belong to the
 ;; same person, we don't care for the number.  Otherwise we won't be
@@ -33,31 +36,41 @@
 (define lookup-name #f)
 (define store-number #f)
 (define with-tree #f)
+(define get-all #f)
 ;; Now we define the phone book and its accessors.
 (let ((phone-book empty-tree)
       (lock (make-mutex)))
+  (define (with-mutex-locked fun)
+    (begin (mutex-lock! lock)
+           (let ((return-value (fun)))
+             (begin (mutex-unlock! lock)
+                    return-value))))
   (set! lookup-name
     (lambda (name)
-      (begin (mutex-lock! lock)
-             (let ((res (match (lookup comp (list name #f) phone-book)
-                          ((_ number)
-                           number)
-                          (_
-                           #f))))
-               (begin (mutex-unlock! lock)
-                      res)))))
+      (with-mutex-locked
+       (lambda ()
+         (match (lookup comp (list name #f) phone-book)
+           ((_ number)
+            number)
+           (_
+            #f))))))
   (set! store-number
     (lambda (name number)
-      (begin (mutex-lock! lock)
-             (set! phone-book (insert comp (list name number) phone-book))
-             (mutex-unlock! lock))))
+      (with-mutex-locked
+       (lambda ()
+         (set! phone-book (insert comp (list name number) phone-book))))))
   (set! with-tree
     (lambda (fun)
-      (begin (mutex-lock! lock)
-             (let ((new-phone-book (fun phone-book)))
-               (begin (set! phone-book new-phone-book)
-                      (mutex-unlock! lock)
-                      new-phone-book))))))
+      (with-mutex-locked
+       (lambda () (set! phone-book (fun phone-book))))))
+  (set! get-all
+    (lambda ()
+      (with-mutex-locked
+       (lambda ()
+         (fold-with-depth (lambda (d cur prev)
+                            (cons cur prev))
+                          '()
+                          phone-book))))))
 
 ;; Split a uri query string into its components and sort the elements
 ;; by their name.
@@ -89,32 +102,23 @@
 (define (request-uri-query-components request)
   (split-query (uri-query (request-uri request))))
 
-;; This function is used to handle insert events.
-(define (insert-handler name number)
-  (pretty-show (with-tree
-                (lambda (tree)
-                  (insert comp (list name number) tree)))
-               (lambda (elem) (string-append "#" (car elem)
-                                             ": " (cadr elem)))))
-
-;; This function is used to handle lookup events.
-(define (lookup-handler name)
-  (let ((looked-up-name (lookup-name name)))
-    (cond ((not looked-up-name)
-           (string-append name " is not in the phone book"))
-          (else (string-append "number for " name
-                               " is " looked-up-name)))))
-
 ;; Send a 404 message to the client with "msg" in its response body.
 (define (not-found msg)
   (values (build-response #:code 404)
           msg))
 
-;; Send a 200 message to the client with "msg" in its response body.
-(define (reply msg)
-  (values (build-response #:code 200
-                          #:headers '((content-type . (text/plain))))
-          msg))
+(define* (xml-reply msg
+                    #:key
+                    (code 200))
+  "Reply with xml.  This is useful for sending HTML documents to the
+client."
+  (let ((doctype "<!DOCTYPE html>\n"))
+    (values (build-response #:code code
+                            #:headers `((content-type . (text/html))))
+            (lambda (port)
+              (begin
+                (display doctype port)
+                (sxml->xml msg port))))))
 
 ;; This is the request handler.  Valid paths are /lookup and /insert.
 ;; "localhost:8080/insert?name=gnu&number=42" will save a pair of
@@ -123,22 +127,42 @@
 (define (phonebook-handler request request-body)
   (match (request-path-components request)
     ;; match of the path components
+    (()
+     ;; the document root
+     (xml-reply
+      (index-page
+       (list->ul (map (lambda (e)
+                        (match e
+                          ((name number)
+                           (string-append name ": " number))
+                          (_
+                           "no match")))
+                      (get-all))))))
     (("lookup")
      ;; this will match on "/lookup" and "/lookup/".
      (match (request-uri-query-components request)
        ((("name" name))
-        (reply (lookup-handler name)))
+        (match (lookup-name name)
+          (#f
+           (xml-reply (lookup-page-not-found name)
+                      #:code 404))
+          (number
+           (xml-reply (lookup-page-found name
+                                         (lookup-name name))
+                      #:code 200))))
        (failed
         (not-found "unknown query"))))
     (("insert")
      ;; matches "/insert" and "/insert/"
      (match (request-uri-query-components request)
        ((("name" name) ("number" number))
-        (reply (insert-handler name number)))
+        (begin
+          (store-number name number)
+          (xml-reply insert-page)))
        (failed
         (not-found "unknown query"))))
     (nothing
-     (not-found "unknown request"))))
+     (not-found "unknown request path"))))
 
 ;; Run the server
-(run-server phonebook-handler)
+(run-server phonebook-handler 'http '(#:port 8080))
