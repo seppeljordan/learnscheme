@@ -1198,7 +1198,7 @@
     (display n)
     ;; 1
   #+end_src
-  
+
   Um die selbe Variable an verschiedenen stellen in unserem Program
   veraendern zu koennen, nutzen wir =set!=.
   #+begin_src scheme
@@ -1736,6 +1736,100 @@
    (das werden wir noch kennenlernen).  Dies wird den imperativen
    Einfluss auf unsere Programme gering halten, aber trotzdem flexibel
    genug sein, um spannende Konzepte kennenzulernen.
+
+* Beispiel: web server
+  Wie die meisten modernen Sprachen, stellt GNU Guile eine
+  Webserverimplementation bereit, mit der beliebige Daten zwischen
+  Client und Server ausgetauscht werden koennen.  Der entsprechende Code ist im Modul
+  =web server= zu finden.
+
+  #+caption: =<<server-imports>>=
+  #+name: server-imports
+  #+begin_src scheme
+    (use-modules (web server))
+  #+end_src
+
+  Das Modul stellt eine Funktion =run-server= bereit, die den
+  Webserver startet.  =run-server= nimmt ein Pflichtargument entgegen,
+  welches eine Funktion ist, wir nennen sie =handler=.
+
+  #+caption: =<<server-run>>=
+  #+name: server-run
+  #+begin_src scheme
+    (run-server handler)
+  #+end_src
+
+  Die =handler=-Funktion bearbeitet eingehende Requests und
+  konstruiert (gueltige) Responses.  Sie muss zwei Parameter
+  verstehen, wobei der erste Parameter den Request Header und der
+  zweite Parameter den Request body repraesentiert.
+
+  #+caption: =<<server-handler-def>>=
+  #+name: server-handler-def
+  #+begin_src scheme
+    (define (handler request-header request-body)
+      <<server-handler-implementation>>)
+  #+end_src
+
+  Um dem Interface des Webservers zu genuegen, muss die Funktion
+  ausserdem zwei Argumente zurueck geben, nicht zu verwechseln mit
+  einem Paar von zwei Werten.  Guile Scheme stellt die moeglichkeit
+  bereit, dass eine Funktion mehrere Rueckgabewerte hat, dies wird
+  ueber die =values=-Funktion realisiert, die zu den Grundfunktionen
+  der Sprache gehoert.  Der erste Rueckgabewert repraesentiert den
+  Response Header und der zweite Rueckgabewert den Response Body.
+
+  #+caption: =<<server-handler-implementation>>=
+  #+name: server-handler-implementation
+  #+begin_src scheme
+    (values
+     <<server-response-header-implementation>>
+     <<server-response-body-implementation>>)
+  #+end_src
+
+  Um den Response Header zu konstruieren, kann die
+  =build-response=-Funktion aus dem Modul =web response= genutzt
+  werden.
+
+  #+caption: =<<server-imports>>=
+  #+name: server-imports
+  #+begin_src scheme
+    (use-modules (web response))
+  #+end_src
+
+  #+caption: =<<server-response-header-implementation>>=
+  #+name: server-response-header-implementation
+  #+begin_src scheme
+    (build-response #:code 200
+                    #:headers `((content-type . (text/html))))
+  #+end_src
+
+  Die Implementation fuer den Response Body muss eine Funktion mit
+  einem Argument sein.  Dieses Argument ist ein sogenannter Port, auf
+  den die Ausgabe geschrieben werden muss.  Dazu kann zum Beispiel die
+  =display=-Funktion benutzt werden.
+
+  #+caption: =<<server-response-body-implementation>>=
+  #+name: server-response-body-implementation
+  #+begin_src scheme
+    (lambda (port)
+      (display "hello world" port))
+  #+end_src
+
+  Das vollstaendige Programm besteht dann aus den oben definierten
+  Bestandteilen.
+
+  #+begin_src scheme :noweb no-export :tangle examples/server1.scm :shebang "#!/usr/bin/env guile !#"
+    <<server-imports>>
+
+    <<server-handler-def>>
+
+    <<server-run>>
+  #+end_src
+
+  Wenn das Programm =examples/server1.scm= ausgefuehrt wird, wird ein
+  Webserver auf Port 8080 gestartet.  Bei einem Request liefert der
+  Server ein HTML-Dokumen aus, in dem "hello world" steht.
 
 * GNU Free Documentation License
 
