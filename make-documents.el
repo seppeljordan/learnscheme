@@ -4,7 +4,7 @@
   ;; Create a lib directory to store our "libraries"
   (make-directory "lib" 1)
   (make-directory "examples" 1)
-  ;; Extract examples from lessons.org
+  ;; Extract examples from README.org
   (org-babel-tangle))  
 
 (defun make-pdf ()
