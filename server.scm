@@ -94,8 +94,7 @@
 ;;
 ;; See the "phonebook-handler" function for a valid example.
 (define (request-path-components request)
-  (sort (split-and-decode-uri-path (uri-path (request-uri request)))
-        (lambda (x y) (string<? (car x) (car y)))))
+  (split-and-decode-uri-path (uri-path (request-uri request))))
 
 ;; This is the composition of request-uri, uri-query and split-query.
 ;; See these functions for more explanation.
