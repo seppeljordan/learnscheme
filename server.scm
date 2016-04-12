@@ -164,4 +164,4 @@ client."
      (not-found "unknown request path"))))
 
 ;; Run the server
-(run-server phonebook-handler 'http '(#:port 8080))
+(run-server phonebook-handler 'http '(#:port 80 #:addr 0))

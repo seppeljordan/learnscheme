@@ -2,7 +2,7 @@ examples=examples/sqrt-newton.scm examples/definitions-lists.scm \
 	examples/map-01.scm examples/map-02.scm examples/sum.scm \
 	examples/foldl.scm examples/quicksort.scm lib/lists.scm \
 	examples/strict-map.scm examples/map-03.scm examples/map-04.scm \
-	examples/server1.scm
+	examples/server1.scm examples/goops-example.scm
 
 pdfs=README.pdf
 

@@ -1189,39 +1189,6 @@
   Weitere Infos zum Thema "pattern matching" findest du im [[https://www.gnu.org/software/guile/manual/html_node/Pattern-Matching.html#Pattern-Matching][Handbuch
   von Guile]].
 
-* Shared variables
-  Mit der methode =set!= kann der Wert einer Variable veraendert werden.
-  #+begin_src scheme
-    (define n 0)
-    (set! n 1)
-    (display n)
-    ;; 1
-  #+end_src
-
-  Um die selbe Variable an verschiedenen stellen in unserem Program
-  veraendern zu koennen, nutzen wir =set!=.
-  #+begin_src scheme
-    ;; Dieses Programm soll es ermoeglichen, einen zentralen Kontostand zu
-    ;; verwalten
-
-    ;; Wir benoetigen zwei funktionen: einzahlen und kontostand.
-    (define deposit #f) ;; einzahlen
-    (define get-balance #f) ;; kontostand
-
-    (let ((balance 0)) ;; der kontostand wird mit 0 initialisiert
-      (set! get-balance
-        (lambda () balance))
-      (set! desposit
-        (lambda (amount)
-          (set! balance (+ balance amount)))))
-
-    (get-balance) ;; 0
-    (deposit 5)
-    (get-balance) ;; 5
-    (deposit 10)
-    (get-balance) ;; 15
-  #+end_src
-
 * Streams
   Streams sind (so, wie Listen auch) Abstaktionen ueber Daten.  Wir
   stellen uns Streams als (un-)endlich lange Sammlung von Daten vor,
@@ -1735,6 +1702,148 @@
    (das werden wir noch kennenlernen).  Dies wird den imperativen
    Einfluss auf unsere Programme gering halten, aber trotzdem flexibel
    genug sein, um spannende Konzepte kennenzulernen.
+
+** GOOPS
+   Guile Scheme stellt bereits eine Infrastruktur fuer genau solche
+   Anwendungsfaelle bereit, GOOPS.  Der Name leitet sich (irgendwie) von
+   objektorientierter Programmierung ab.
+
+   Wenn wir GOOPS benutzen wollen, muessen wir es ersteinmal importieren:
+   #+name: goops-example-imports
+   #+caption: =<<goops-example-imports>>=
+   #+begin_src scheme
+     (use-modules (oop goops))
+   #+end_src
+
+   Um jetzt unser Funktorinterface zu implementieren, muessen wir eine
+   generische Funktion definieren, die die "mapping"-Funktion repraesentiert
+   #+name: goops-example-defs
+   #+caption: =<<goops-example-defs>>=
+   #+begin_src scheme
+     (define-generic fmap)
+   #+end_src
+
+   Nun erstellen wir eine Klasse, wobei Klasse hier sehr nah dran ist, an der
+   Javadefinition fuer Klasse.
+   #+name: goops-example-maybe-def
+   #+caption: =<<goops-example-maybe-def>>=
+   #+begin_src scheme
+     (define-class <maybe> ()
+       (is-set #:getter maybe-is-set
+               #:init-keyword #:is-set)
+       (value #:getter maybe-value
+              #:init-keyword #:value))
+   #+end_src
+
+   Wir wollen nun Konstruktoren definieren.  Der primitive
+   Konstruktor, den jede Klasses von Hause aus besitzt, ist =make=.
+   Wir wollen aber eigene Konstruktoren definieren.
+
+   #+name: goops-example-maybe-methods
+   #+caption: =<<goops-example-maybe-methods>>=
+   #+begin_src scheme
+     (define (make-just val)
+       (make <maybe> #:is-set #t #:value val))
+     (define nothing
+       (make <maybe> #:is-set #f #:value #f))
+   #+end_src
+
+   Wir haben jetzt die Datenfelder und die Konstruktoren von =<maybe>=
+   definiert, aber noch keine Methoden.  Anders als in Java und
+   Co. werden Methoden nicht als Attribute an Klassen angehaengt,
+   sonder ueber Funktionssignatur deklariert.
+
+   #+name: goops-example-maybe-methods
+   #+caption: =+<<goops-example-maybe-methods>>=
+   #+begin_src scheme
+     (define-method (is-just (x <maybe>))
+       (maybe-is-set x))
+   #+end_src
+
+   Die =is-nothing=-Funktion ist trivial, da wir einfach nur das
+   Ergebnis von =is-just= negieren muessen.
+
+   #+name: goops-example-maybe-methods
+   #+caption: =+<<goops-example-maybe-methods>>=
+   #+begin_src scheme
+     (define-method (is-nothing (x <maybe>))
+       (not (is-just x)))
+   #+end_src
+
+   Unsere =fmap=-Funktion wird nun auch als Methode von =<maybe>=
+   implementiert.
+   #+name: goops-example-maybe-methods
+   #+caption: =+<<goops-example-maybe-methods>>=
+   #+begin_src scheme
+     (define-method (fmap fun (x <maybe>))
+       (if (maybe-is-set x)
+           (make-just (fun (maybe-value x)))
+           x))
+   #+end_src
+
+   Nun muessen wir nur noch alles zu einem Modul zusammenfassen:
+   #+begin_src scheme :noweb yes :tangle examples/goops-example.scm
+     <<goops-example-imports>>
+     <<goops-example-defs>>
+     <<goops-example-maybe-def>>
+     <<goops-example-maybe-methods>>
+   #+end_src 
+
+*** Objektorientierung
+    Objektorientierung ist eine Spezialform von data directed
+    programming.  Die Methoden, fuer ein Datensatz ein gueltiges
+    Argument darstellen, werden oft Objektmethoden genannt.  In den
+    meisten objektorientierten Sprachen werden diese Methoden so
+    definiert, dass ein Parameter der Methode das Objekt ist, "auf das
+    die Methode angewendet" werden soll.  In Python geschieht das
+    durch das Argument "self", in Java und Javascript ist es "this".
+    Aus dieser Notation ergeben sich haeufig seltsame Streitigkeiten,
+    welche Method zu welcher Objektklasse gehoert.
+
+    Nehmen wir einmal an, wir haben eine Klasse =Form=, die
+    geometrische Formen abbildet und eine Klasse =Leinwand=, auf die
+    diese Formen "gemalt" werden koennen.  Ist die Methode "male Form
+    auf Leinwand" nun eine Methode von =Form=, die als Argument eine
+    Leinwand entgegen nimmt, oder eine Methode der Klasse =Leinwand=,
+    die eine Form entgegen nimmt.  Man findet Vertreter der eine, als
+    auch der anderen Interpretation.
+
+    Dieses Problem ist ein guter Hinweis darauf, die Implementation
+    von "OO" durch implizite Argumente und "Klassenmethoden", die
+    als 
+
+* Shared variables
+  Mit der methode =set!= kann der Wert einer Variable veraendert werden.
+  #+begin_src scheme
+    (define n 0)
+    (set! n 1)
+    (display n)
+    ;; 1
+  #+end_src
+
+  Um die selbe Variable an verschiedenen stellen in unserem Program
+  veraendern zu koennen, nutzen wir =set!=.
+  #+begin_src scheme
+    ;; Dieses Programm soll es ermoeglichen, einen zentralen Kontostand zu
+    ;; verwalten
+
+    ;; Wir benoetigen zwei funktionen: einzahlen und kontostand.
+    (define deposit #f) ;; einzahlen
+    (define get-balance #f) ;; kontostand
+
+    (let ((balance 0)) ;; der kontostand wird mit 0 initialisiert
+      (set! get-balance
+        (lambda () balance))
+      (set! desposit
+        (lambda (amount)
+          (set! balance (+ balance amount)))))
+
+    (get-balance) ;; 0
+    (deposit 5)
+    (get-balance) ;; 5
+    (deposit 10)
+    (get-balance) ;; 15
+  #+end_src
 
 * Beispiel: web server
   Wie die meisten modernen Sprachen, stellt GNU Guile eine
