@@ -1808,9 +1808,14 @@
     die eine Form entgegen nimmt.  Man findet Vertreter der eine, als
     auch der anderen Interpretation.
 
-    Dieses Problem ist ein guter Hinweis darauf, die Implementation
-    von "OO" durch implizite Argumente und "Klassenmethoden", die
-    als 
+    Dieses Problem ist ein guter Hinweis darauf, dass die
+    Implementation von "OO" durch implizite Argumente und
+    "Klassenmethoden", die als Standard gilt, so ihre Problemchen hat,
+    ueber die man sich im klaren seien sollte.  Das heisst *nicht*,
+    dass die Art und Weise, wie Java und Co. OO implementieren,
+    schlecht oder abzulehnen ist, sondern soll nur ein Hinweis auf
+    Alternativen und Probleme sein.
+
 
 * Shared variables
   Mit der methode =set!= kann der Wert einer Variable veraendert werden.

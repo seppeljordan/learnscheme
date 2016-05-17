@@ -4,8 +4,10 @@
     (progn
       (require 'package)
       (package-initialize)
-      (require 'htmlize))
+      (require 'htmlize)
+      (require 'geiser))
   (error nil))
+(setq geiser-active-implementations '(guile))
 
 (defun make-examples ()
   ;; Create a lib directory to store our "libraries"
